@@ -1,0 +1,46 @@
+{{- if and .Values.valult .Values.secrets -}}
+{{- $appname := printf "%s" (include "name" .) -}}
+{{- $vaultpath := printf "secret/infra/%s/%s/%s" (include "vaultNamespace" .) (include "vaultProjectName" .) (include "environment" .) -}}
+apiVersion: v1
+kind: Vault
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ $appname }}
+  labels:
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-weight": "-4"
+  labels:
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+spec:
+  path: {{ $vaultpath }}
+  type: "KEYVALUEV2"
+  {{- else if .Values.secrets}}
+{{- $appname := printf "%s" (include "name" .) -}}
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: {{ $appname }}-aws-secrets
+  namespace: {{ .Release.Namespace }}
+spec:
+  provider: aws
+  secretObjects:                                 # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
+    - secretName: {{ $appname }}
+      type: Opaque
+      data:
+{{- range $key, $value := .Values.secrets }}
+        - objectName: {{ $key | quote}}
+          key: {{ $key | quote }}
+{{- end }}
+  parameters:
+    objects: |
+{{- range $key, $value := .Values.secrets }}
+      - objectName: {{ $value | quote }}
+        objectAlias: {{ $key }}
+        objectType: "ssmparameter"
+{{- end }}
+{{- end -}}

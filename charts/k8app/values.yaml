@@ -1,0 +1,184 @@
+environment: ""
+appName: ""
+branch: ""
+nodeSelector: {}
+tolerations: {}
+jaegerEnabled: false
+containerArgs: ""
+replicas: 1
+buildId:
+serviceAccountName: "app" # infra should always create this service account
+deployment:
+  enabled: true
+
+rbac:
+  create: false
+  resources: []
+
+service:
+  enabled: false
+#  ports:
+#    http:
+#      externalPort: 8080
+#      internalPort: 8080
+#      protocol: TCP
+
+serviceExternal:
+  enabled: false
+
+serviceHeadless:
+  enabled: false
+
+serviceExternalName:
+  enabled: false
+  externalName: ""
+
+image:
+  repository: ""
+  tag: ""
+
+strategy:
+  rollingUpdate:
+    maxSurge:
+    maxUnavailable:
+  type: RollingUpdate
+
+prometheus:
+  enabled: false
+  port: "8011"
+  path: "/metrics"
+
+resources: {}
+  # requests:
+  #   memory: 400Mi
+
+ingress:
+  enabled: false
+  fqdn: ""
+  aliases: ""
+  vaultCert: ""
+  extraHosts: {}
+    # "some-host.com":
+    #   locations:
+    #     "/main":
+    #       serviceName: "test-sv"
+    #       servicePort: 8888
+    #     "/page":
+    #       serviceName: "test-sv"
+    #       servicePort: 8881
+    # "test.some-host.com":
+    #   locations:
+    #     "/secondary":
+    #       serviceName: "test-sv"
+    #       servicePort: 8880
+    #     "/path":
+    #       serviceName: "test-sv"
+    #       servicePort: 8889
+
+job:
+#If true, create simple jobs, e.g. migration
+  enabled: false
+  spec: {}
+  # printenv:
+  #   command: ["printenv"]
+  #   args: ["HOSTNAME", "PATH"]
+  # host:
+  #   command: ["echo"]
+  #   args: ["HELLO", "WORLD"]
+
+cloudflare:
+  enabled: false
+
+cronjob:
+#If true, create cron jobs
+  enabled: false
+  spec: {}
+  # printenv:
+  #   command: ["printenv"]
+  #   args: ["HOSTNAME","PATH"]
+  #   schedule: "* * * * *"
+  # host:
+  #   command: ["echo"]
+  #   args: ["HELLO", "WORLD"]
+  #   schedule: "*/2 * * * *"
+
+worker:
+  #If true, create worker deployments
+  enabled: false
+#  spec:
+#   printenv:
+#    initContainers:
+#      command:
+#        - make
+#      args:
+#        - migrate-up
+#        - DB_HOST=$(POSTGRES_HOST)
+#        - DB_PORT=$(POSTGRES_PORT)
+#        - DB_USER=$(POSTGRES_USER)
+#        - DB_PASS=$(POSTGRES_PASS)
+#        - DB_NAME=$(POSTGRES_DATABASE)
+#     replicas: 3
+#     command: ["printenv"]
+#     args: ["HOSTNAME","PATH"]
+#     resources:
+#       limits:
+#         cpu: 2000m
+#         memory: 1750Mi
+#       requests:
+#         memory: 1750Mi
+#         cpu: 200m
+#     livenessProbe:
+#       mode: httpGet
+#       execCommand:
+#         command: "cat"
+#       httpGet:
+#         port: 80
+#         path: "/health"
+#       tcpSocket:
+#         port: 80
+#     readinessProbe:
+#       mode: httpGet
+#       execCommand:
+#         command: "cat"
+#       httpGet:
+#         port: 80
+#         path: "/health"
+#       tcpSocket:
+#         port: 80
+
+livenessProbe:
+  enabled: false
+  mode: httpGet
+  execCommand:
+    command: "cat"
+  httpGet:
+    port: 80
+    path: "/health"
+  tcpSocket:
+    port: 80
+
+readinessProbe:
+  enabled: false
+  mode: httpGet
+  execCommand:
+    command: "cat"
+  httpGet:
+    port: 80
+    path: "/health"
+  tcpSocket:
+    port: 80
+
+secrets: {}
+configmap: {}
+vaultProjectName: ""
+vaultNamespace: ""
+
+alerting: {}
+  # rules:
+  #   "ContainerWaitingReason":
+  #     annotations:
+  #       message: '{{ $labels.container }} status - `WAITING`, reason - {{ $labels.reason }}'
+  #     expr: kube_pod_container_status_waiting_reason != 0
+  #     for: 1m
+  #     labels:
+  #       severity: critical

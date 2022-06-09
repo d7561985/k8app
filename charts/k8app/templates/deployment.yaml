@@ -1,0 +1,205 @@
+{{- if .Values.deployment.enabled }}
+{{- $appname := printf "%s" (include "name" .) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.Namespace }}
+  annotations:
+  labels:
+    app: {{ $appname }}
+    appver: "{{ .Values.image.tag }}"
+    chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    release: "{{ .Release.Name }}"
+  name: {{ $appname }}
+spec:
+  replicas: {{ default 3 .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $appname }}
+      release: "{{ .Release.Name }}"
+  strategy:
+    {{- if eq .Values.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.strategy.rollingUpdate.maxSurge | default "1" }}
+      maxUnavailable: {{ .Values.strategy.rollingUpdate.maxUnavailable | default "0" }}
+    {{- end }}
+    type: {{ .Values.strategy.type | default "RollingUpdate" }}
+  template:
+    metadata:
+      annotations:
+    {{- if .Values.branch }}
+        app/branch: {{ default "" .Values.branch |quote }}
+    {{- end }}
+    {{- if .Values.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.prometheus.port | quote | default "8011" }}
+        prometheus.io/path: {{ .Values.prometheus.path | quote | default "/metrics" }}
+    {{- end }}
+      labels:
+        app: {{ $appname }}
+        appver: "{{ .Values.image.tag }}"
+        release: "{{ .Release.Name }}"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ $appname }}
+              topologyKey: "kubernetes.io/hostname"
+    {{- if .Values.serviceAccountName }}
+      serviceAccountName: {{ .Values.serviceAccountName}}
+    {{- else if .Values.rbac.create }}
+      serviceAccountName: {{ .Release.Namespace }}-{{ $appname }}
+    {{- end }}
+    {{- if .Values.secrets }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $appname }}-aws-secrets
+    {{- end }}
+    {{- if .Values.initContainers -}}
+      initContainers:
+        - name: {{ $appname }}-init
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          command:
+{{ .Values.initContainers.command  | toYaml | indent 12}}
+          args:
+{{ .Values.initContainers.args | toYaml | indent 12}}
+          env:
+      {{- if .Values.secrets }}
+      {{- range $key, $value := .Values.secrets }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $key }}
+                  name: {{ $appname }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.configmap }}
+          envFrom:
+            - configMapRef:
+                name: {{ $appname }}
+      {{- end }}
+      {{- if .Values.secrets }}
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+      {{- end }}
+      {{- end }}
+      containers:
+      - env:
+        - name: BUILD_ID
+          value: {{ default "000" .Values.buildId  | quote }}
+        - name: PROJECT
+          value: {{ .Values.appName }}
+        - name: OTEL_SERVICE_NAME
+          value: {{ .Values.appName }}
+    {{- if .Values.jaegerEnabled }}
+        - name: JAEGER_AGENT_BINARY_PORT
+          value: "6832"
+        - name: JAEGER_AGENT_COMPACT_PORT
+          value: "6831"
+        - name: JAEGER_AGENT_SAMPLING_PORT
+          value: "5778"
+        - name: JAEGER_AGENT_ZIPKIN_THRIFT_PORT
+          value: "5775"
+        - name: JAEGER_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+    {{- end }}
+    {{- if .Values.secrets }}
+    {{- range $key, $value := .Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              key: {{ $key }}
+              name: {{ $appname }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.configmap }}
+        envFrom:
+        - configMapRef:
+            name: {{ $appname }}
+    {{- end }}
+    {{- if .Values.secrets }}
+        volumeMounts:
+          - name: secrets-store-inline
+            mountPath: "/mnt/secrets-store"
+    {{- end }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: Always
+        name: {{ $appname }}
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sleep","10"]
+    {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
+    {{- if eq .Values.livenessProbe.mode "httpGet" }}
+          httpGet:
+            path: {{ .Values.livenessProbe.httpGet.path  }}
+            port: {{ .Values.livenessProbe.httpGet.port | default 80 }}
+            scheme: HTTP
+    {{- end }}
+    {{- if eq .Values.livenessProbe.mode "tcpSocket" }}
+          tcpSocket:
+            port: {{ .Values.livenessProbe.tcpSocket.port | default 80 }}
+    {{- end }}
+    {{- if eq .Values.livenessProbe.mode "execCommand" }}
+          exec:
+            command:
+              {{- range .Values.livenessProbe.execCommand.command}}
+            - {{ . }}
+              {{- end }}
+    {{- end }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 5 }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | default 5 }}
+    {{- end }}
+    {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
+    {{- if eq .Values.readinessProbe.mode "httpGet" }}
+          httpGet:
+            path: {{ .Values.readinessProbe.httpGet.path  }}
+            port: {{ .Values.readinessProbe.httpGet.port | default 80 }}
+            scheme: HTTP
+    {{- end }}
+    {{- if eq .Values.readinessProbe.mode "tcpSocket" }}
+          tcpSocket:
+            port: {{ .Values.readinessProbe.tcpSocket.port }}
+    {{- end }}
+    {{- if eq .Values.readinessProbe.mode "execCommand" }}
+          exec:
+            command:
+              {{- range .Values.readinessProbe.execCommand.command}}
+            - {{ . }}
+              {{- end }}
+    {{- end }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 5 }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | default 5 }}
+    {{- end }}
+    {{- if .Values.containerArgs }}
+        args: [{{ .Values.containerArgs }}]
+    {{- end }}
+    {{- if or .Values.deploySecretHarbor .Values.deploySecretNexus }}
+      imagePullSecrets:
+      - name: regsecret
+    {{- end }}
+      restartPolicy: Always
+{{- end -}}

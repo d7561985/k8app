@@ -1,0 +1,57 @@
+{{- if .Values.cloudflare.enabled -}}
+  {{- $root := . -}}
+  {{- $appname := printf "%s" (include "name" .) -}}
+  {{- $jobName :=  printf "%s-%s" (include "name" .) "cf-purge-cache" -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: "{{ $root.Release.Namespace }}"
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-3"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  labels:
+    helm.sh/chart: "{{$root.Chart.Name}}-{{$root.Chart.Version}}"
+    job: "{{ $jobName }}"
+    chart: "{{ $root.Chart.Name }}-{{ $root.Chart.Version }}"
+    release: "{{ $root.Release.Name }}"
+  name: "{{ $jobName }}"
+spec:
+  backoffLimit: 1
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      name: "{{ $jobName }}"
+      labels:
+        helm.sh/chart: "{{$root.Chart.Name}}-{{$root.Chart.Version}}"
+        job: "{{ $jobName }}"
+    spec:
+      containers:
+      - name: "{{ $jobName }}"
+        env:
+        - name: ZONE_NAME
+          value: "{{ $root.Values.ingress.fqdn }}"
+        - name: CF_EMAIL
+          valueFrom:
+            secretKeyRef:
+              key: CLOUDFLARE_EMAIL
+              name: "{{ $appname }}"
+        - name: CF_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: CLOUDFLARE_APIKEY
+              name: "{{ $appname }}"
+        image: nexus.egt-ua.loc/devops/cloudflare:latest
+        imagePullPolicy: Always
+    {{- if $root.Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml $root.Values.nodeSelector | indent 8 }}
+    {{- end }}
+    {{- if $root.Values.tolerations }}
+      tolerations:
+{{ toYaml $root.Values.tolerations | indent 8 }}
+    {{- end }}
+      restartPolicy: Never
+{{- end -}}

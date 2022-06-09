@@ -1,0 +1,69 @@
+{{- if .Values.ingress.enabled -}}
+{{- $serviceDefaultName :=  printf "%s-%s" (include "name" .) "sv" -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ template "name" . }}-ingress
+  labels:
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+{{- if or .Values.ingress.aliases .Values.ingress.annotations }}
+  annotations:
+{{- if .Values.ingress.aliases }}
+    nginx.ingress.kubernetes.io/server-alias: {{ .Values.ingress.aliases | quote }}
+{{- end }}
+{{- if .Values.ingress.annotations }}
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+{{- end }}
+{{- end }}
+spec:
+  rules:
+{{- if .Values.ingress.fqdn }}
+  - host: {{ .Values.ingress.fqdn }}
+    http:
+      paths:
+{{- range $key, $value := .Values.ingress.locations }}
+      - path: {{ $key }}
+        backend:
+          service:
+            name: {{ default $serviceDefaultName $value.serviceName }}
+            port: {{ default 80 $value.servicePort }}
+
+{{- end }}
+{{- end }}
+{{- if .Values.ingress.extraHosts }}
+  {{- range $key, $value := .Values.ingress.extraHosts }}
+  - host: {{ $key }}
+    http:
+      paths:
+    {{- range $key, $value := $value.locations }}
+      - path: {{ $key }}
+        backend:
+          service:
+            name: {{ default $serviceDefaultName $value.serviceName }}
+            port: {{ default 80 $value.servicePort }}
+
+    {{- end }}
+  {{- end }}
+{{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+  - hosts:
+    {{- if .Values.ingress.extraHosts }}
+      {{- range $key, $value := .Values.ingress.extraHosts }}
+    - {{ $key }}
+      {{- end}}
+    {{- end}}
+    {{- if .Values.ingress.aliases }}
+      {{- range $key := split "," .Values.ingress.aliases }}
+    - {{ $key }}
+      {{- end}}
+    {{- end}}
+    {{- with .Values.ingress.fqdn }}
+    - {{ . }}
+    secretName: {{ . | replace "." "-" }}
+    {{- end }}
+  {{- end }}
+{{- end -}}

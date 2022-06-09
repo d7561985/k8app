@@ -1,0 +1,88 @@
+{{- if .Values.cronjob.enabled -}}
+  {{- $root := . -}}
+  {{- $appname := printf "%s" (include "name" .) -}}
+  {{- $cronJobName :=  printf "%s-%s" (include "name" .) "cron" -}}
+  {{- range $key, $value := .Values.cronjob.spec }}
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: "{{ $root.Release.Namespace }}"
+  labels:
+    helm.sh/chart: "{{ $root.Chart.Name }}-{{ $root.Chart.Version }}"
+    cronjob: "{{ $cronJobName }}"
+    chart: "{{ $root.Chart.Name }}-{{ $root.Chart.Version }}"
+    release: "{{ $root.Release.Name }}"
+  name: "{{ $cronJobName }}-{{ $key }}"
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 10
+  jobTemplate:
+    metadata:
+      name: "{{ $cronJobName }}-{{ $key }}"
+      labels:
+        helm.sh/chart: "{{$root.Chart.Name}}-{{$root.Chart.Version}}"
+        cronjob: "{{ $cronJobName }}"
+    spec:
+      template:
+        spec:
+          containers:
+          - name: "{{ $key }}"
+            command: 
+            {{- range $value.command}}
+            - {{ . }}
+            {{- end }}
+            args:
+            {{- range $value.args}}
+            - {{ . }}
+            {{- end }}
+            {{- if $root.Values.configmap }}
+            envFrom:
+            - configMapRef:
+                name: "{{ $appname }}"
+            {{- end }}
+            env:
+            - name: BUILD_ID
+              value: {{ $root.Values.buildId | quote | default "000" }}
+            - name: SENTRY_ENVIRONMENT
+              value: {{ $root.Values.environment | quote }}
+            - name: SENTRY_RELEASE
+              value: {{ $root.Values.image.tag | quote }}
+            {{- if $root.Values.tracingEnabled }}
+            - name: JAEGER_AGENT_BINARY_PORT
+              value: "6832"
+            - name: JAEGER_AGENT_COMPACT_PORT
+              value: "6831"
+            - name: JAEGER_AGENT_SAMPLING_PORT
+              value: "5778"
+            - name: JAEGER_AGENT_ZIPKIN_THRIFT_PORT
+              value: "5775"
+            - name: JAEGER_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            {{- end }}
+            {{- if $root.Values.secrets }}
+            {{- range $key, $value := $root.Values.secrets }}
+            - name: "{{ $key }}"
+              valueFrom:
+                secretKeyRef:
+                  key: "{{ $value }}"
+                  name: "{{ $appname }}"
+            {{- end }}
+            {{- end }}
+            image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+            imagePullPolicy: Always
+        {{- if $root.Values.nodeSelector }}
+          nodeSelector:
+          {{ toYaml $root.Values.nodeSelector | indent 8 }}
+        {{- end }}
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 30
+  schedule: {{ default "1 * * * *" $value.schedule | quote }}
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  {{- end -}}
+{{- end -}}

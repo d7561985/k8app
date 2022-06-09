@@ -1,0 +1,28 @@
+{{- if .Values.alerting -}}
+{{- $ruleName :=  printf "%s.%s" .Release.Name  "rules" -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: prometheus-operator    
+    release: prometheus
+  name: {{ $ruleName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+  - name: {{ $ruleName }}
+    rules:
+    {{- range $key, $value := .Values.alerting.rules }}
+    - alert: {{ $key }}
+      annotations:
+      {{- range $key, $value := $value.annotations }}
+        {{ $key }}: {{ $value | quote}}
+      {{- end }}
+      expr: {{ $value.expr }}
+      for: {{ $value.for }}
+      labels:
+      {{- range $key, $value := $value.labels }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+    {{- end }}
+{{- end -}}

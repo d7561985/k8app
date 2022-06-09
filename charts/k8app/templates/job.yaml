@@ -1,0 +1,89 @@
+{{- if .Values.job.enabled -}}
+  {{- $appname := printf "%s" (include "name" .) -}}
+  {{- $jobName :=  printf "%s-%s" (include "name" .) "job" -}}
+  {{- range $key, $value := .Values.job.spec }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: "{{ $.Release.Namespace }}"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-3"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  labels:
+    helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
+    job: "{{ $jobName }}"
+    chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
+    release: "{{ $.Release.Name }}"
+  name: "{{ $jobName }}-{{ $key }}"
+spec:
+  backoffLimit: 10
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      name: "{{ $jobName }}-{{ $key }}"
+      labels:
+        helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
+        job: "{{ $jobName }}"
+    spec:
+    {{- if $.Values.serviceAccountName }}
+      serviceAccountName: {{ $.Values.serviceAccountName}}
+    {{- else if $.Values.rbac.create }}
+      serviceAccountName: {{ $.Release.Namespace }}-{{ $appname }}
+    {{- end }}
+    {{- if $.Values.secrets }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $appname }}-aws-secrets
+    {{- end }}
+      containers:
+      - name: "{{ $key }}"
+        command: 
+        {{- range $value.command }}
+        - {{ . }}
+        {{- end }}
+        args:
+        {{- range $value.args }}
+        - {{ . }}
+        {{- end }}
+        {{- if $.Values.configmap }}
+        envFrom:
+        - configMapRef:
+            name: "{{ $appname }}"
+        {{- end }}
+        env:
+        - name: BUILD_ID
+          value: {{ default "000" $.Values.image.tag | quote  }}
+        {{- if $.Values.secrets }}
+        {{- range $key, $value := $.Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              key: "{{ $key }}"
+              name: "{{ $appname }}"
+        {{- end }}
+        {{- end }}
+    {{- if $.Values.secrets }}
+        volumeMounts:
+          - name: secrets-store-inline
+            mountPath: "/mnt/secrets-store"
+    {{- end }}
+        image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+        imagePullPolicy: Always
+    {{- if $.Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml $.Values.nodeSelector | indent 8 }}
+    {{- end }}
+    {{- if $.Values.tolerations }}
+      tolerations:
+{{ toYaml $.Values.tolerations | indent 8 }}
+    {{- end }}
+      restartPolicy: OnFailure
+  {{- end -}}
+{{- end -}}

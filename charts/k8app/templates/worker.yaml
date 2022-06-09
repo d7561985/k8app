@@ -1,0 +1,155 @@
+{{- if .Values.worker.enabled -}}
+  {{- $root := . -}}
+  {{- $appname := printf "%s" (include "name" .) -}}
+  {{- range $workerName, $workerConfig := .Values.worker.spec }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ $root.Release.Namespace }}
+  annotations:
+  labels:
+    app: {{ $appname }}
+    type: worker
+    chart: "{{$root.Chart.Name}}-{{$root.Chart.Version}}"
+    release: "{{ $root.Release.Name }}"
+  name: {{ $appname }}-{{ $workerName }}
+spec:
+  replicas: {{ default 3 $workerConfig.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $appname }}-{{ $workerName }}
+      type: worker
+      worker-name: {{ $appname }}-{{ $workerName }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+    {{- if $root.Values.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ $root.Values.prometheus.port | quote | default "8011" }}
+    {{- end }}
+      labels:
+        app: {{ $appname }}-{{ $workerName }}
+        type: worker
+        worker-name: {{ $appname }}-{{ $workerName }}
+    spec:
+      serviceAccountName: {{ $root.Values.serviceAccountName}}
+    {{- if $root.Values.secrets }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $appname }}-aws-secrets
+    {{- end }}
+      containers:
+      - env:
+        - name: BUILD_ID
+          value: {{ $root.Values.buildId | quote | default "NULL" }}
+    {{- if $root.Values.secrets }}
+    {{- range $key, $value := $root.Values.secrets }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              key: {{ $key }}
+              name: {{ $appname }}
+    {{- end }}
+    {{- end }}
+    {{- if $root.Values.configmap }}
+        envFrom:
+        - configMapRef:
+            name: {{ $appname }}
+    {{- end }}
+    {{- if $root.Values.secrets }}
+        volumeMounts:
+          - name: secrets-store-inline
+            mountPath: "/mnt/secrets-store"
+    {{- end }}
+        image: {{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}
+        imagePullPolicy: Always
+        name: {{ $appname }}-{{ $workerName }}
+        resources:
+{{ default $root.Values.resources $workerConfig.resources | toYaml | indent 10 }}
+    {{- if $workerConfig.livenessProbe }}
+    {{- with $workerConfig.livenessProbe }}
+        livenessProbe:
+          failureThreshold: {{ .failureThreshold | default 3 }}
+      {{- if eq .mode "httpGet" }}
+      {{- with .httpGet }}
+          httpGet:
+            path: {{ .path  }}
+            port: {{ .port | default 80 }}
+            scheme: HTTP
+      {{- end }}
+      {{- end }}
+      {{- if eq .mode "tcpSocket" }}
+      {{- with .tcpSocket}}
+          tcpSocket:
+            port: {{ .tcpSocket.port | default 80 }}
+      {{- end }}
+      {{- end }}
+      {{- if eq .mode "execCommand" }}
+          exec:
+            command:
+              {{- range .execCommand.command}}
+            - {{ . }}
+              {{- end }}
+      {{- end }}
+          initialDelaySeconds: {{ .initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .periodSeconds | default 5 }}
+          successThreshold: {{ .successThreshold | default 1 }}
+          timeoutSeconds: {{ .timeoutSeconds | default 5 }}
+    {{- end }}
+    {{- end }}
+    {{- if $workerConfig.readinessProbe }}
+    {{- with $workerConfig.readinessProbe }}
+        readinessProbe:
+          failureThreshold: {{ .failureThreshold | default 3 }}
+    {{- if eq .mode "httpGet" }}
+    {{- with .httpGet }}
+          httpGet:
+            path: {{ .path  }}
+            port: {{ .port | default 80 }}
+            scheme: HTTP
+    {{- end }}
+    {{- end }}
+    {{- if eq .mode "tcpSocket" }}
+    {{- with .tcpSocket }}
+          tcpSocket:
+            port: {{ .port }}
+    {{- end }}
+    {{- end }}
+    {{- if eq .mode "execCommand" }}
+          exec:
+            command:
+              {{- range .execCommand.command}}
+            - {{ . }}
+              {{- end }}
+    {{- end }}
+          initialDelaySeconds: {{ .initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .periodSeconds | default 5 }}
+          successThreshold: {{ .successThreshold | default 1 }}
+          timeoutSeconds: {{ .timeoutSeconds | default 5 }}
+    {{- end }}
+    {{- end }}
+        command:
+        {{- range $workerConfig.command }}
+        - {{ . }}
+        {{- end }}
+        args:
+        {{- range $workerConfig.args }}
+        - {{ . }}
+        {{- end }}
+    {{- if $root.Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml $root.Values.nodeSelector | indent 8 }}
+    {{- end }}
+      restartPolicy: Always
+  {{- end -}}
+{{- end -}}

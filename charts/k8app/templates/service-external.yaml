@@ -1,0 +1,34 @@
+{{- if .Values.serviceExternal.enabled -}}
+{{- $serviceDefaultName :=  printf "%s-%s" (include "name" .) "ext-sv" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ $serviceDefaultName }}
+  labels:
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+spec:
+  ports:
+  {{- range $key, $value := .Values.serviceExternal.ports }}
+  - port: {{ default 20999 $value.externalPort }}
+    targetPort: {{ $value.internalPort }}
+    protocol: {{ $value.protocol }}
+    name: {{ $key }}
+  {{- end }}
+  {{- if .Values.serviceExternal.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.serviceExternal.loadBalancerIP }}
+  {{- end -}}
+  {{- if .Values.serviceExternal.loadBalancerSourceRanges}}
+  loadBalancerSourceRanges:
+  {{- range .Values.service.loadBalancerSourceRanges }}
+  - {{ . }}
+  {{- end }}
+  {{- end }}
+  selector:
+    app: {{ template "name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: LoadBalancer
+{{- end -}}
