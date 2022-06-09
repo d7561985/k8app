@@ -1,0 +1,15 @@
+apiVersion: v1
+entries:
+  k8app:
+  - apiVersion: v2
+    created: "2022-06-09T14:52:27.49101898Z"
+    description: Deployment for base pinup app
+    digest: 7dca359bbd462dfe8c4de5eb18e2739bd3b0e48aa8cb7a692e11bb259dc95153
+    maintainers:
+    - email: d7561985@gmail.com
+      name: DevOps
+    name: k8app
+    urls:
+    - https://github.com/d7561985/k8app/releases/download/k8app-3.0.0/k8app-3.0.0.tgz
+    version: 3.0.0
+generated: "2022-06-09T14:52:27.49102548Z"
