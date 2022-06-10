@@ -12,5 +12,5 @@ helm repo add k8app https://d7561985.github.io/k8app
 Install an example.
 
 ```
-helm install k8app app/k8app
+helm install app k8app/app
 ```

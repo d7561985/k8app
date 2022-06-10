@@ -1,7 +1,7 @@
-name: k8app
+name: app
 description: Deployment for base pinup app
 maintainers:
 - email: d7561985@gmail.com
   name: DevOps
-version: 3.0.0
+version: 3.0.1
 apiVersion: v2
