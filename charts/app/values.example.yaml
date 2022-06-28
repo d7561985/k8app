@@ -1,0 +1,12 @@
+appName: "nginx"
+environment: dev
+
+image:
+  repository: "nginx"
+  tag: "latest"
+
+configmap:
+  DEBUG: 'true'
+
+secrets:
+  SERVER_ADD: "/server/addr"

@@ -8,14 +8,13 @@ metadata:
   name: {{ $appname }}
   labels:
     helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "-4"
-  labels:
-    app: {{ template "name" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: "{{ .Release.Name }}"
 spec:
   path: {{ $vaultpath }}
   type: "KEYVALUEV2"
@@ -26,9 +25,18 @@ kind: SecretProviderClass
 metadata:
   name: {{ $appname }}-aws-secrets
   namespace: {{ .Release.Namespace }}
+  annotations:
+    checksum/secrets: {{ printf "%v" .Values.secrets | sha256sum }}
+{{/*    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}*/}}
+    image/tag: {{.Values.image.tag}}
+  labels:
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
 spec:
   provider: aws
-  secretObjects:                                 # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
+  secretObjects: # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
     - secretName: {{ $appname }}
       type: Opaque
       data:
