@@ -1,0 +1,23 @@
+{{- range $service, $value := .Values.services}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tel.fullname" $ }}-{{$service}}-srv
+  labels:
+    {{- include "tel.labels" $ | nindent 4 }}
+spec:
+  type: {{ default "ClusterIP" $value.type  }}
+  ports:
+    {{- range $x, $data := $value.ports}}
+      {{- if $data.port}}
+      - name: {{$data.name}}-srv
+        port: {{$data.port}}
+        protocol: TCP
+        targetPort: {{$data.name}}
+      {{- end}}
+    {{- end}}
+  selector:
+    app: {{$service}}
+    {{- include "tel.selectorLabels" $ | nindent 4 }}
+{{- end }}

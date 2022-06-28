@@ -1,0 +1,14 @@
+{{- range $service, $value := .Values.services}}
+  {{- if $value.mount}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-{{$service}}-mount-configmap
+data:
+  {{- range $value.mount  }}
+  {{ .name }}: |-
+    {{- ($.Files.Get .path)  | nindent 4}}
+  {{- end }}
+  {{- end}}
+{{- end}}

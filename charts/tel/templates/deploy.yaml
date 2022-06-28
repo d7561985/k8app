@@ -1,0 +1,70 @@
+{{- range $service, $value := .Values.services}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tel.fullname" $ }}-{{$service}}
+  labels:
+    {{- include "tel.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{$service}}
+      {{- include "tel.selectorLabels" $ | nindent 6 }}
+  template:
+    metadata:
+      {{- with $.Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: {{$service}}
+        {{- include "tel.selectorLabels" $ | nindent 8 }}
+    spec:
+      {{- if $value.mount}}
+      volumes:
+        - name: mount
+          configMap:
+            name: {{ $.Release.Name }}-{{$service}}-mount-configmap
+      {{- end}}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{$service}}
+          {{- if $value.args}}
+          args: {{ $value.args | toJson }}
+          {{- end}}
+          {{- if $value.mount}}
+          volumeMounts:
+          {{- with (index $value.mount 0) }}
+            - mountPath: {{ .dest }}
+              name: mount
+              readOnly: true
+          {{- end}}
+          {{- end}}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{ $value.image.repository }}:{{ $value.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+        {{- range $k, $v := $value.ports }}
+            - containerPort: {{ default 80 $v.containerPort }}
+              protocol: {{  default "TCP" $v.protocol }}
+              name: {{ $v.name }}
+        {{- end }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
