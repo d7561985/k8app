@@ -62,8 +62,10 @@ services:
         containerPort: 1888
       - name: promcollector
         containerPort: 8888
+        container: 8888
       - name: promexst
         containerPort: 8889
+        container: 8889
       - name: health
         containerPort: 13133
       - name: otel
@@ -81,6 +83,10 @@ services:
       - name: prometheus
         containerPort: 9090
         port: 9090
+    mount:
+      - name: prometheus.yml
+        path: config/prometheus/prometheus.yml
+        dest: /etc/prometheus
   grafana:
     image:
       repository: grafana/grafana
