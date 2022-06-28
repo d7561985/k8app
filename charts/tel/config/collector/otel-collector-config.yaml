@@ -14,12 +14,12 @@ exporters:
       enabled: true
   logging:
   otlp:
-    endpoint: otel-tempo-srv:4317
+    endpoint: tempo-srv:4317
     tls:
       insecure: true
   loki:
     format: body
-    endpoint: "http://otel-loki-srv:3100/loki/api/v1/push"
+    endpoint: "http://loki-srv:3100/loki/api/v1/push"
     sending_queue:
       # Enabled indicates whether to not enqueue batches before sending to the consumerSender.
       enabled: false

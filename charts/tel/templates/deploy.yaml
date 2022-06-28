@@ -24,9 +24,11 @@ spec:
     spec:
       {{- if $value.mount}}
       volumes:
-        - name: mount
+        {{- range $value.mount  }}
+        - name: {{.name}}
           configMap:
-            name: {{ $.Release.Name }}-{{$service}}-mount-configmap
+            name: {{ $.Release.Name }}-{{$service}}-{{ .name }}-configmap
+        {{- end}}
       {{- end}}
       securityContext:
         {{- toYaml $.Values.podSecurityContext | nindent 8 }}
@@ -37,9 +39,9 @@ spec:
           {{- end}}
           {{- if $value.mount}}
           volumeMounts:
-          {{- with (index $value.mount 0) }}
+          {{- range $value.mount  }}
             - mountPath: {{ .dest }}
-              name: mount
+              name: {{.name}}
               readOnly: true
           {{- end}}
           {{- end}}
