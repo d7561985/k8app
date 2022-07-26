@@ -38,3 +38,15 @@ Expand the vault project name of the release
 {{- define "vaultCert" -}}
 {{- .Values.vaultCert | default .Values.ingress.vaultCert -}}
 {{- end -}}
+
+{{- define "storageClass" -}}
+{{- if and (not (empty .Values.volume.storageClass.create)) .Values.volume.enabled -}}
+{{- printf "%s-%s" (include "name" .) (default "gp" .Values.volume.storageClass.name)  -}}
+{{- else -}}
+{{- default "gp2" .Values.volume.storageClass.name -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "persistantClaim" -}}
+{{- printf "%s-claim" (include "name" .) -}}
+{{- end -}}

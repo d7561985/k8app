@@ -10,3 +10,16 @@ configmap:
 
 secrets:
   SERVER_ADD: "/server/addr"
+
+volume:
+  enabled: true
+  resources:
+    requests:
+      storage: 2Gi
+  storageClass:
+    name: sc
+    create:
+      provisioner: "aws-ebs-csi-driver"
+      parameters:
+        type: gp3
+        iops: "3000"
