@@ -145,6 +145,7 @@ spec:
           {{- if .Values.volume.enabled }}
           - name: {{template "persistantClaim" . }}
             mountPath: {{ .Values.volume.mountPath}}
+            readOnly: true
           {{- end -}}
           {{- if .Values.secrets }}
           - name: secrets-store-inline

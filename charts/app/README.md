@@ -18,7 +18,7 @@ volume:
 ```
 otherwise is assumed that StorageClass already exists and will use it name - `.volume.storageClass.name`. Note: gp2 - default EKS StorageClass available by default via provision: `kubernetes.io/aws-ebs`
 
-Create `PersistentVolumeClaim` for specific app and mount it.
+Create `PersistentVolumeClaim` for specific app and mount it. Service mount `readOnly` mode only
 
 example:
 ```yaml
