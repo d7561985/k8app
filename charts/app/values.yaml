@@ -182,3 +182,18 @@ alerting: {}
   #     for: 1m
   #     labels:
   #       severity: critical
+
+volume:
+  enabled: false
+  mountPath: /data
+  resources:
+    requests:
+      storage: 1Gi
+  storageClass:
+    name: gp2
+    create: {}
+#    create:
+#      provisioner: "aws-ebs-csi-driver"
+#      parameters:
+#        type: gp3
+#        iops: "3000"

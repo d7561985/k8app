@@ -7,7 +7,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: {{ $root.Release.Namespace }}
-  annotations:
+  annotations: {}
   labels:
     app: {{ $appname }}
     type: worker
@@ -39,15 +39,20 @@ spec:
         worker-name: {{ $appname }}-{{ $workerName }}
     spec:
       serviceAccountName: {{ $root.Values.serviceAccountName}}
-    {{- if $root.Values.secrets }}
       volumes:
+        {{- if .Values.volume.enabled }}
+        - name: {{template "persistantClaim" . }}
+          persistentVolumeClaim:
+            claimName: {{template "persistantClaim" . }}
+        {{- end -}}
+        {{- if $root.Values.secrets }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ $appname }}-aws-secrets
-    {{- end }}
+        {{- end }}
       containers:
       - env:
         - name: BUILD_ID
@@ -66,11 +71,15 @@ spec:
         - configMapRef:
             name: {{ $appname }}
     {{- end }}
-    {{- if $root.Values.secrets }}
         volumeMounts:
+          {{- if .Values.volume.enabled }}
+          - name: {{template "persistantClaim" . }}
+            mountPath: {{ .Values.volume.mountPath}}
+          {{- end -}}
+          {{- if $root.Values.secrets }}
           - name: secrets-store-inline
             mountPath: "/mnt/secrets-store"
-    {{- end }}
+          {{- end }}
         image: {{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}
         imagePullPolicy: Always
         name: {{ $appname }}-{{ $workerName }}

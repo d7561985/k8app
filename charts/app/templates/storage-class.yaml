@@ -1,0 +1,20 @@
+{{- if and (not (empty .Values.volume.storageClass.create)) .Values.volume.enabled -}}
+{{- $appname := printf "%s" (include "name" .) -}}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  namespace: {{ .Release.Namespace }}
+  annotations: {}
+  labels:
+    app: {{ $appname }}
+    appver: "{{ .Values.image.tag }}"
+    chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    release: "{{ .Release.Name }}"
+  name: {{ template "storageClass" . }}
+provisioner: {{.Values.volume.storageClass.create.provisioner | default "kubernetes.io/aws-ebs" }}
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  {{- if not (empty .Values.volume.storageClass.create.parameters)}}
+{{toYaml .Values.volume.storageClass.create.parameters | indent 2}}
+  {{ end}}
+{{end}}

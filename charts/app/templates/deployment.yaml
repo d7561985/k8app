@@ -57,8 +57,13 @@ spec:
     {{- else if .Values.rbac.create }}
       serviceAccountName: {{ .Release.Namespace }}-{{ $appname }}
     {{- end }}
-    {{- if .Values.secrets }}
       volumes:
+        {{- if .Values.volume.enabled }}
+        - name: {{template "persistantClaim" . }}
+          persistentVolumeClaim:
+            claimName: {{template "persistantClaim" . }}
+        {{- end -}}
+    {{- if .Values.secrets }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -89,11 +94,15 @@ spec:
             - configMapRef:
                 name: {{ $appname }}
       {{- end }}
-      {{- if .Values.secrets }}
           volumeMounts:
+            {{- if .Values.volume.enabled }}
+            - name: {{template "persistantClaim" . }}
+              mountPath: {{ .Values.volume.mountPath}}
+            {{- end -}}
+            {{- if .Values.secrets }}
             - name: secrets-store-inline
               mountPath: "/mnt/secrets-store"
-      {{- end }}
+            {{- end }}
       {{- end }}
       containers:
       - env:
@@ -132,11 +141,15 @@ spec:
         - configMapRef:
             name: {{ $appname }}
     {{- end }}
-    {{- if .Values.secrets }}
         volumeMounts:
+          {{- if .Values.volume.enabled }}
+          - name: {{template "persistantClaim" . }}
+            mountPath: {{ .Values.volume.mountPath}}
+          {{- end -}}
+          {{- if .Values.secrets }}
           - name: secrets-store-inline
             mountPath: "/mnt/secrets-store"
-    {{- end }}
+          {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: Always
         name: {{ $appname }}

@@ -1,0 +1,158 @@
+# Default values for tel.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+#      - "1888:1888"   # pprof extension
+#      - "8888:8888"   # Prometheus metrics exposed by the collector
+#      - "8889:8889"   # Prometheus exporter metrics
+#      - "13133:13133" # health_check extension
+#      - "4317:4317"    # OTLP gRPC receiver
+#      - "55670:55679" # zpages extension
+#      - "24224:24224" # fluentforwarder
+#      - "24224:24224/udp" # fluentforwarder
+replicaCount: 1
+
+services:
+  tempo:
+    args: ["-config.file", "/config/tempo.yaml" ]
+    image:
+      repository: grafana/tempo
+      tag: 1.4.1-amd64
+    mount:
+      - name: tempo
+        dest: /config
+        data:
+          - name: tempo.yaml
+            path: config/tempo/tempo-local.yaml
+          - name: overrides.yaml
+            path: config/tempo/overrides.yaml
+    ports:
+      - name: jaeger
+        containerPort: 14268
+      - name: tempo
+        containerPort: 3200
+        port: 3200
+      - name: otelgrpc
+        containerPort: 4317
+        port: 4317
+      - name: otelhttp
+        containerPort: 4318
+        port: 4318
+      - name: zipkin
+        containerPort: 9411
+  loki:
+    image:
+      repository: grafana/loki
+      tag: 2.5.0
+    ports:
+      - name: loki
+        containerPort: 3100
+        port: 3100
+  otelcollector:
+    args:
+      - --config
+      - /etc/opentelemetry/otel-collector-config.yaml
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: 0.53.0-amd64
+    mount:
+      - name: collector
+        dest: /etc/opentelemetry
+        data:
+          - name: otel-collector-config.yaml
+            path: config/collector/otel-collector-config.yaml
+    ports:
+      - name: pprof
+        containerPort: 1888
+      - name: promcollector
+        containerPort: 8888
+        container: 8888
+      - name: promexst
+        containerPort: 8889
+        container: 8889
+      - name: health
+        containerPort: 13133
+      - name: otel
+        containerPort: 4317
+        port: 4317
+      - name: zpages
+        containerPort: 55679
+      - name: fluentforwarder
+        containerPort: 24224
+  prometheus:
+    image:
+      repository: prom/prometheus
+      tag: v2.36.1
+    ports:
+      - name: prometheus
+        containerPort: 9090
+        port: 9090
+    mount:
+      - name: prometheus
+        dest: /etc/prometheus
+        data:
+          - name: prometheus.yml
+            path: config/prometheus/prometheus.yml
+  grafana:
+    image:
+      repository: grafana/grafana
+      tag: 9.0.0
+    type: LoadBalancer
+    ports:
+      - name: http
+        containerPort: 3000
+        port: 8080
+    mount:
+      - name: ini
+        dest: /etc/grafana
+        data:
+          - name: grafana.ini
+            path: config/grafana/grafana.ini
+      - name: datasource
+        dest: /etc/grafana/provisioning/datasources
+        data:
+          - name: datasources.yaml
+            path: config/grafana/grafana-datasources.yaml
+image:
+  pullPolicy: IfNotPresent
+
+ports:
+  tempo:
+
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: { }
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext:
+  runAsUser: 0
+  capabilities:
+    add: [ "SYS_ADMIN" ]
+  # capabilities:
+#   drop:
+#   - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+resources: { }
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+#   cpu: 100m
+#   memory: 128Mi
+# requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+
+nodeSelector: { }
+
+tolerations: [ ]
+
+affinity: { }
