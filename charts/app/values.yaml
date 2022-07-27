@@ -185,11 +185,12 @@ alerting: {}
 
 volume:
   enabled: false
+  mountPath: /data
   resources:
     requests:
       storage: 1Gi
   storageClass:
-    name: my-storage
+    name: gp2
     create: {}
 #    create:
 #      provisioner: "aws-ebs-csi-driver"

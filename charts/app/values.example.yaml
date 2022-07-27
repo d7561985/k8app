@@ -11,8 +11,15 @@ configmap:
 secrets:
   SERVER_ADD: "/server/addr"
 
+worker:
+  enabled: true
+  replicas: 2
+  command: ["printenv"]
+  args: ["HOSTNAME","PATH"]
+
 volume:
   enabled: true
+  mountPath: "/my-path"
   resources:
     requests:
       storage: 2Gi
