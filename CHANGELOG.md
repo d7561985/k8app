@@ -2,8 +2,10 @@
 
 ## app
 
-### 3.0.6
-* 
+### 3.0.6, 3.0.7
+* documentation
+* volume mounts
+ 
 ### 3.0.5
 * worker bug fix
 

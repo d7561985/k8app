@@ -61,6 +61,7 @@ spec:
         {{- if .Values.volume.enabled }}
         - name: {{template "persistantClaim" . }}
           persistentVolumeClaim:
+            readOnly: true
             claimName: {{template "persistantClaim" . }}
         {{- end -}}
     {{- if .Values.secrets }}
@@ -149,6 +150,7 @@ spec:
           {{- end -}}
           {{- if .Values.secrets }}
           - name: secrets-store-inline
+            readOnly: true
             mountPath: "/mnt/secrets-store"
           {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}

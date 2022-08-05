@@ -10,6 +10,7 @@ metadata:
   annotations: {}
   labels:
     app: {{ $appname }}
+    appver: "{{ $root.Values.image.tag }}"
     type: worker
     chart: "{{$root.Chart.Name}}-{{$root.Chart.Version}}"
     release: "{{ $root.Release.Name }}"
