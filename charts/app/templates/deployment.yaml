@@ -208,8 +208,17 @@ spec:
           successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | default 5 }}
     {{- end }}
-    {{- if .Values.containerArgs }}
-        args: [{{ .Values.containerArgs }}]
+    {{- if .Values.commands }}
+        command:
+        {{- range .Values.commands }}
+          - {{ . }}
+        {{- end }}
+    {{- end}}
+    {{- if .Values.args }}
+        args:
+        {{- range .Values.args }}
+          - {{ . }}
+        {{- end }}
     {{- end }}
     {{- if or .Values.deploySecretHarbor .Values.deploySecretNexus }}
       imagePullSecrets:

@@ -4,7 +4,9 @@ branch: ""
 nodeSelector: {}
 tolerations: {}
 jaegerEnabled: false
-containerArgs: ""
+commands: []
+args: []
+
 replicas: 1
 buildId:
 serviceAccountName: "app" # infra should always create this service account
