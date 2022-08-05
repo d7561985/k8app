@@ -26,7 +26,7 @@ volume:
   storageClass:
     name: sc
     create:
-      provisioner: "aws-ebs-csi-driver"
+      provisioner: "ebs.csi.aws.com"
       parameters:
         type: gp3
         iops: "3000"
