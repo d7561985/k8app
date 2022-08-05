@@ -2,6 +2,9 @@
 
 ## app
 
+### 3.0.5
+* worker bug fix
+
 ### 3.0.4
 * `commands` and `args` commands 
 

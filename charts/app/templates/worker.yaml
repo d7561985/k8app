@@ -40,10 +40,10 @@ spec:
     spec:
       serviceAccountName: {{ $root.Values.serviceAccountName}}
       volumes:
-        {{- if .Values.volume.enabled }}
-        - name: {{template "persistantClaim" . }}
+        {{- if $root.Values.volume.enabled }}
+        - name: {{template "persistantClaim" $root }}
           persistentVolumeClaim:
-            claimName: {{template "persistantClaim" . }}
+            claimName: {{template "persistantClaim" $root }}
         {{- end -}}
         {{- if $root.Values.secrets }}
         - name: secrets-store-inline
@@ -72,9 +72,9 @@ spec:
             name: {{ $appname }}
     {{- end }}
         volumeMounts:
-          {{- if .Values.volume.enabled }}
-          - name: {{template "persistantClaim" . }}
-            mountPath: {{ .Values.volume.mountPath}}
+          {{- if $root.Values.volume.enabled }}
+          - name: {{template "persistantClaim" $root }}
+            mountPath: {{ $root.Values.volume.mountPath}}
           {{- end -}}
           {{- if $root.Values.secrets }}
           - name: secrets-store-inline
