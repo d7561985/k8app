@@ -4,7 +4,7 @@
   {{- $cronJobName :=  printf "%s-%s" (include "name" .) "cron" -}}
   {{- range $key, $value := .Values.cronjob.spec }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   namespace: "{{ $root.Release.Namespace }}"
@@ -26,9 +26,23 @@ spec:
     spec:
       template:
         spec:
+        {{- if $.Values.serviceAccountName }}
+          serviceAccountName: {{ $.Values.serviceAccountName}}
+        {{- else if $.Values.rbac.create }}
+          serviceAccountName: {{ $.Release.Namespace }}-{{ $appname }}
+        {{- end }}
+        {{- if $.Values.secrets }}
+          volumes:
+            - name: secrets-store-inline
+              csi:
+                driver: secrets-store.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: {{ $appname }}-aws-secrets
+        {{- end }}
           containers:
           - name: "{{ $key }}"
-            command: 
+            command:
             {{- range $value.command}}
             - {{ . }}
             {{- end }}
@@ -68,10 +82,15 @@ spec:
             - name: "{{ $key }}"
               valueFrom:
                 secretKeyRef:
-                  key: "{{ $value }}"
+                  key: "{{ $key }}"
                   name: "{{ $appname }}"
             {{- end }}
             {{- end }}
+        {{- if $.Values.secrets }}
+            volumeMounts:
+              - name: secrets-store-inline
+                mountPath: "/mnt/secrets-store"
+        {{- end }}
             image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
             imagePullPolicy: Always
         {{- if $root.Values.nodeSelector }}
