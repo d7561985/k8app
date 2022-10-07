@@ -28,7 +28,7 @@ metadata:
   annotations:
     checksum/secrets: {{ printf "%v" .Values.secrets | sha256sum }}
 {{/*    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}*/}}
-    image/tag: {{.Values.image.tag}}
+    image/tag: "{{.Values.image.tag}}"
   labels:
     helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
     app: {{ template "name" . }}

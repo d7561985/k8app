@@ -2,6 +2,10 @@
 
 ## app
 
+### 3.0.8, 3.0.9
+* cronjob fix
+* this crd appload when tag is number
+
 ### 3.0.6, 3.0.7
 * documentation
 * volume mounts
