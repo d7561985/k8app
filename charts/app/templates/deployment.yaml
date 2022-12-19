@@ -36,6 +36,7 @@ spec:
         prometheus.io/path: {{ .Values.prometheus.path | quote | default "/metrics" }}
     {{- end }}
         checksum/secrets: {{ printf "%v" .Values.secrets | sha256sum }}
+        checksum/conf: {{ printf "%v" .Values.configmap | sha256sum }}
       labels:
         app: {{ $appname }}
         appver: "{{ .Values.image.tag }}"
