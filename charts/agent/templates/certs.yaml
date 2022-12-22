@@ -1,0 +1,27 @@
+{{-  if .Values.certs}}
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: {{ include "agent.fullname" . }}-certs
+  annotations:
+    checksum/secrets: {{ printf "%v" .Values.secrets | sha256sum }}
+    image/tag: "{{.Values.image.tag}}"
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  provider: aws
+  secretObjects: # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
+    - secretName: certs
+      type: Opaque
+      data:
+{{- range $key, $value := .Values.certs }}
+      - objectName: {{ $value | quote}}
+        key: {{ $value | quote }}
+{{- end }}
+  parameters:
+    objects: |
+{{- range $key, $value := .Values.certs }}
+      - objectName: {{ $value | quote }}
+        objectType: "ssmparameter"
+{{- end }}
+{{- end }}
