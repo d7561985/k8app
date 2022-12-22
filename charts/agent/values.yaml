@@ -485,7 +485,7 @@ config: |
         processors: [ memory_limiter, batch, resource, resource/tempo ]
         exporters: [ logging, otlp/global ]
       metrics:
-        receivers: [ prometheus ]
+        receivers: [ otlp, prometheus ]
         processors: [ memory_limiter, batch, resource ]
         exporters: [ logging, otlp/global, prometheus]
       logs:
