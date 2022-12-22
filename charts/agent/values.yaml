@@ -11,6 +11,10 @@ gateway:
 
 replicaCount: 1
 
+service:
+  type: ClusterIP
+  port: 4317
+
 rbac:
   create: true
 
