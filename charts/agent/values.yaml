@@ -6,6 +6,9 @@ info:
   namespace: observability
   deployment_environment: global
 
+gateway:
+  addr: otel.time2go.tech:4317
+
 replicaCount: 1
 
 rbac:
@@ -454,10 +457,9 @@ config: |
       sampling_initial: 10
       sampling_thereafter: 50
     otlp/global:
-      endpoint: gateway:4317
+      endpoint: {{ .Values.gateway.addr }
       compression: snappy
       tls:
-        server_name_override: otel.time2go.tech
         ca_file: /certs/ca.crt
         cert_file: /certs/client.crt
         key_file: /certs/client.key
