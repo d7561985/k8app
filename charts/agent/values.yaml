@@ -2,9 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 info:
-  license: global
-  namespace: observability
-  deployment_environment: global
+  license: PLZ_CHANGE
+  namespace: PLZ_CHANGE
+  deployment_environment: PLZ_CHANGE
 
 gateway:
   addr: otel.time2go.tech:4317
@@ -55,11 +55,11 @@ securityContext: { }
 
 resources:
   limits:
-    cpu: 4
-    memory: 25Gi
+    cpu: 1
+    memory: 1Gi
   requests:
-    cpu: 2
-    memory: 15Gi
+    cpu: 500m
+    memory: 0.5Gi
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -438,8 +438,8 @@ processors:
   # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
   memory_limiter:
     check_interval: 2s
-    limit_mib: 10000
-    spike_limit_mib: 5000
+    limit_mib: 500
+    spike_limit_mib: 1000
 
 config: |
   receivers:
