@@ -38,6 +38,12 @@ spec:
             - name: otel
               containerPort: 4317
               protocol: TCP
+            - name: http
+              containerPort: 4318
+              protocol: TCP
+            - name: fluentforward
+              containerPort: 24224
+              protocol: TCP
           volumeMounts:
             {{- if .Values.certs }}
             - name: certs

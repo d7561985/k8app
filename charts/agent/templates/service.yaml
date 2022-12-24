@@ -11,5 +11,13 @@ spec:
       targetPort: otel
       protocol: TCP
       name: otel
+    - port: 4318
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 24224
+      targetPort: fluentforward
+      protocol: TCP
+      name: fluentforward
   selector:
     {{- include "agent.selectorLabels" . | nindent 4 }}
