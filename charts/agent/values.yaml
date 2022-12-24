@@ -498,6 +498,6 @@ config: |
         processors: [ memory_limiter, batch, resource ]
         exporters: [ logging, otlp/global, prometheus]
       logs:
-        receivers: [ otlp ]
+        receivers: [ fluentforward, otlp ]
         processors: [ memory_limiter, batch, resource ]
         exporters: [ logging, otlp/global ]
