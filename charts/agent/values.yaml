@@ -445,7 +445,10 @@ config: |
   receivers:
     otlp:
       protocols:
+        http:
         grpc:
+    fluentforward:
+      endpoint: 0.0.0.0:24224
     prometheus:
       config:
         scrape_configs:
