@@ -7,17 +7,11 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: otel
+    {{- range $port := .Values.service.ports }}
+    - port: {{ $port.port }}
+      targetPort: {{ $port.name }}
       protocol: TCP
-      name: otel
-    - port: 4318
-      targetPort: http
-      protocol: TCP
-      name: http
-    - port: 24224
-      targetPort: fluentforward
-      protocol: TCP
-      name: fluentforward
+      name: {{ $port.name }}
+    {{- end }}
   selector:
     {{- include "agent.selectorLabels" . | nindent 4 }}

@@ -13,7 +13,13 @@ replicaCount: 1
 
 service:
   type: ClusterIP
-  port: 4317
+  ports:
+    - port: 4317
+      name: otelgrpc
+    - port: 4318
+      name: otelhttp
+    - port: 24224
+      name: fluentforward
 
 rbac:
   create: true

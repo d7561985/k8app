@@ -35,15 +35,11 @@ spec:
             - --config=/etc/otelcol-contrib/config.yaml
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: otel
-              containerPort: 4317
+            {{- range $port := .Values.service.ports }}
+            - name: {{ $port.name }}
+              containerPort: {{ $port.port }}
               protocol: TCP
-            - name: http
-              containerPort: 4318
-              protocol: TCP
-            - name: fluentforward
-              containerPort: 24224
-              protocol: TCP
+            {{- end }}
           volumeMounts:
             {{- if .Values.certs }}
             - name: certs
