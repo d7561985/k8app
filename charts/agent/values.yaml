@@ -528,13 +528,6 @@ config:
       - sources:
           - from: connection
             name: ip
-    resource/tempo:
-      attributes:
-        - key: "service.name"
-          from_attribute: "service"
-          action: insert
-        - key: "service"
-          action: delete
     # loki not support keys with dots - so replace it
     transform:
       log_statements:
@@ -551,6 +544,13 @@ config:
           - delete_key(attributes, "logtag")
           - delete_key(attributes, "log.file.path")
           - replace_all_patterns(attributes, "key", "\\.", "_")
+    resource/tempo:
+      attributes:
+        - key: "service.name"
+          from_attribute: "service"
+          action: insert
+        - key: "service"
+          action: delete
     resource:
       attributes:
         - key: namespace
@@ -568,6 +568,7 @@ config:
           action: delete
         - key: host
           from_attribute: "host.name"
+          action: upsert
     batch:
       send_batch_size: 1000
       send_batch_max_size: 3000
