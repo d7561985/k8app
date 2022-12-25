@@ -6,6 +6,8 @@ info:
   namespace: PLZ_CHANGE
   deployment_environment: PLZ_CHANGE
 
+IsDaemonSet: false
+
 gateway:
   addr: otel.time2go.tech:4317
 

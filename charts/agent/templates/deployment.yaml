@@ -1,11 +1,17 @@
 apiVersion: apps/v1
+{{- if not .Values.IsDaemonSet}}
 kind: Deployment
+{{- else }}
+kind: DaemonSet
+{{- end }}
 metadata:
   name: {{ include "agent.fullname" . }}
   labels:
     {{- include "agent.labels" . | nindent 4 }}
 spec:
+ {{- if not .Values.IsDaemonSet}}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "agent.selectorLabels" . | nindent 6 }}
