@@ -18,8 +18,8 @@ service:
       name: otelgrpc
     - port: 4318
       name: otelhttp
-    - port: 24224
-      name: fluentforward
+#    - port: 24224
+#      name: fluentforward
 
 rbac:
   create: true
@@ -492,7 +492,7 @@ config:
         exporters: [ logging, otlp/global, prometheus ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
-        processors: [ memory_limiter, batch, k8sattributes, resource ]
+        processors: [ memory_limiter, batch, k8sattributes, resource, transform ]
         exporters: [ logging, otlp/global ]
   extensions:
     health_check:
@@ -535,6 +535,22 @@ config:
           action: insert
         - key: "service"
           action: delete
+    # loki not support keys with dots - so replace it
+    transform:
+      log_statements:
+      - context: resource
+        statements:
+          - delete_key(attributes, "k8s.pod.uid")
+          - delete_key(attributes, "k8s.container.restart_count")
+          - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s.namespace")
+          - replace_all_patterns(attributes, "key", "k8s.pod.name", "k8s_instance")
+          - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
+          - replace_all_patterns(attributes, "key", "\\.", "_")
+      - context: log
+        statements:
+          - delete_key(attributes, "logtag")
+          - delete_key(attributes, "log.file.path")
+          - replace_all_patterns(attributes, "key", "\\.", "_")
     resource:
       attributes:
         - key: namespace
@@ -546,35 +562,12 @@ config:
         - key: deployment_environment
           value: "{{ .Values.info.deployment_environment }}"
           action: upsert
-        - key: deployment_environment
-          from_attribute: "deployment.environment"
-          action: upsert
-        - key: deployment_environment
-          from_attribute: "deployment_environment"
-          action: upsert
-        - key: license
-          from_attribute: "deployment.license"
-          action: upsert
-        - key: license
-          from_attribute: "deployment_license"
-          action: upsert
-        - key: host
-          from_attribute: "host_name"
-          action: upsert
-        - key: host
-          from_attribute: "host.name"
-          action: upsert
         - key: http.scheme
           action: delete
         - key: net.host.port
           action: delete
-    #      - key: "service"
-    #        from_attribute: "service.name"
-    #        action: insert
-    #      - key: "service.name"
-    #        action: delete
-    #      - key: "service.instance.id"
-    #        action: delete
+        - key: host
+          from_attribute: "host.name"
     batch:
       send_batch_size: 1000
       send_batch_max_size: 3000
