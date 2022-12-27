@@ -54,7 +54,7 @@ podSecurityContext: { }
 # fsGroup: 2000
 
 securityContext: { }
-  # capabilities:
+# capabilities:
 #   drop:
 #   - ALL
 # readOnlyRootFilesystem: true
@@ -109,62 +109,127 @@ config:
             scrape_interval: 15s
             static_configs:
               - targets: [ '0.0.0.0:8888' ]
-          - job_name: 'kubernetes-cadvisor'
-            scheme: https
-            scrape_interval: 1m
-            tls_config:
-              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              insecure_skip_verify: true
-            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-            kubernetes_sd_configs:
-              - role: node
-            relabel_configs:
-              #      - action: labelmap
-              #        regex: __meta_kubernetes_node_label_(.+)
-              - target_label: __address__
-                replacement: kubernetes.default.svc.cluster.local:443
-              - source_labels: [ __meta_kubernetes_node_name ]
-                regex: (.+)
-                target_label: __metrics_path__
-                replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
-          - job_name: 'kubernetes-kubelet'
-            scrape_interval: 1m
-            scheme: https
-            tls_config:
-              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              insecure_skip_verify: true
-            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-            kubernetes_sd_configs:
-              - role: node
-            relabel_configs:
-              #      - action: labelmap
-              #        regex: __meta_kubernetes_node_label_(.+)
-              - target_label: __address__
-                replacement: kubernetes.default.svc.cluster.local:443
-              - source_labels: [ __meta_kubernetes_node_name ]
-                regex: (.+)
-                target_label: __metrics_path__
-                replacement: /api/v1/nodes/$$1/proxy/metrics
-          - job_name: 'kubernetes-kube-state'
-            scrape_interval: 1m
+          # required helm name: node-exporter
+          # example: up{container="node-exporter",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",namespace="monitoring",pod="node-exporter-prometheus-node-exporter-svg2b"} 1 1672147386763
+          #       => up{deployment_environment="test",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container_name="node-exporter",k8s_daemonset_name="node-exporter-prometheus-node-exporter",k8s_namespace_name="monitoring",k8s_node_name="ip-10-0-2-193.eu-central-1.compute.internal",k8s_pod_name="node-exporter-prometheus-node-exporter-svg2b",k8s_pod_uid="c2c6ae55-a746-43cf-bc4c-7b1af050726a",license="test",namespace="test",net_host_name="10.0.2.193",origin_prometheus="prometheus01",service_instance_id="10.0.2.193:9100",service_name="node-exporter-prometheus-node-exporter-svg2b"} 1 1672154051968
+          #       => up{deployment_environment="test",instance="node-exporter-prometheus-node-exporter-svg2b",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container="node-exporter",k8s_namespace="monitoring",license="test",namespace="test",net_host_name="10.0.2.193",nodename="ip-10-0-2-193.eu-central-1.compute.internal",origin_prometheus="test_test_test",service_instance_id="10.0.2.193:9100",service_name="serviceMonitor/monitoring/prometheus-prometheus-node-exporter"} 1 1672156467807
+          - job_name: serviceMonitor/monitoring/prometheus-prometheus-node-exporter
+            honor_labels: false
             kubernetes_sd_configs:
               - role: pod
+                selectors:
+                  - role: pod
+                    # only scrape data from pods running on the same node as collector
+                    field: "spec.nodeName=$NODE_NAME"
+            scheme: http
             relabel_configs:
-              #      - action: labelmap
-              #        regex: __meta_kubernetes_pod_label_(.+)
-              - source_labels: [ __meta_kubernetes_namespace ]
+              - action: keep
+                source_labels:
+                  - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
+                regex: (node-exporter);true
+              - action: keep
+                source_labels:
+                  - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
+                regex: (prometheus-node-exporter);true
+              - source_labels: [ __address__, __meta_kubernetes_pod_annotation_prometheus_io_port ]
                 action: replace
-                target_label: kubernetes_namespace
-              - source_labels: [ __meta_kubernetes_pod_name ]
-                action: replace
-                target_label: kubernetes_pod_name
-              - source_labels: [ __meta_kubernetes_pod_label_grafanak8sapp ]
-                regex: .*true.*
-                action: keep
-              - source_labels: [ '__meta_kubernetes_pod_label_daemon', '__meta_kubernetes_pod_node_name' ]
-                regex: 'node-exporter;(.*)'
-                action: replace
-                target_label: nodename
+                target_label: __address__
+                regex: (.+?)(?::\d+)?;(\d+)
+                replacement: $$1:$$2
+              - action: drop
+                source_labels:
+                  - __meta_kubernetes_pod_phase
+                regex: (Failed|Succeeded)
+              - action: replace
+                replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+                target_label: origin_prometheus
+            metric_relabel_configs: [ ]
+          # required helm name: kube-state-metrics
+          - job_name: serviceMonitor/monitoring/prometheus-kube-state-metrics
+            honor_labels: false
+            kubernetes_sd_configs:
+              - role: pod
+                selectors:
+                  - role: pod
+                    # only scrape data from pods running on the same node as collector
+                    field: "spec.nodeName=$NODE_NAME"
+            relabel_configs:
+              - action: keep
+                source_labels:
+                  - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
+                regex: (kube-state-metrics);true
+              - action: keep
+                source_labels:
+                  - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
+                regex: (kube-state-metrics);true
+              - action: drop
+                source_labels:
+                  - __meta_kubernetes_pod_phase
+                regex: (Failed|Succeeded)
+              - action: replace
+                replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+                target_label: cluster
+            metric_relabel_configs: []
+#          - job_name: 'kubernetes-cadvisor'
+#            scheme: https
+#            scrape_interval: 1m
+#            tls_config:
+#              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+#              insecure_skip_verify: true
+#            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+#            kubernetes_sd_configs:
+#              - role: node
+#            relabel_configs:
+#              #      - action: labelmap
+#              #        regex: __meta_kubernetes_node_label_(.+)
+#              - target_label: __address__
+#                replacement: kubernetes.default.svc.cluster.local:443
+#              - source_labels: [ __meta_kubernetes_node_name ]
+#                regex: (.+)
+#                target_label: __metrics_path__
+#                replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
+#          - job_name: 'kubernetes-kubelet'
+#            scrape_interval: 1m
+#            scheme: https
+#            tls_config:
+#              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+#              insecure_skip_verify: true
+#            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+#            kubernetes_sd_configs:
+#              - role: node
+#            relabel_configs:
+#              #      - action: labelmap
+#              #        regex: __meta_kubernetes_node_label_(.+)
+#              - target_label: __address__
+#                replacement: kubernetes.default.svc.cluster.local:443
+#              - source_labels: [ __meta_kubernetes_node_name ]
+#                regex: (.+)
+#                target_label: __metrics_path__
+#                replacement: /api/v1/nodes/$$1/proxy/metrics
+#          - job_name: 'kubernetes-kube-state'
+#            scrape_interval: 1m
+#            kubernetes_sd_configs:
+#              - role: pod
+#            relabel_configs:
+#              #      - action: labelmap
+#              #        regex: __meta_kubernetes_pod_label_(.+)
+#              - source_labels: [ __meta_kubernetes_namespace ]
+#                action: replace
+#                target_label: kubernetes_namespace
+#              - source_labels: [ __meta_kubernetes_pod_name ]
+#                action: replace
+#                target_label: kubernetes_pod_name
+#              - source_labels: [ __meta_kubernetes_pod_label_grafanak8sapp ]
+#                regex: .*true.*
+#                action: keep
+#              - source_labels: [ '__meta_kubernetes_pod_label_daemon', '__meta_kubernetes_pod_node_name' ]
+#                regex: 'node-exporter;(.*)'
+#                action: replace
+#                target_label: nodename
         #  - job_name: kubernetes-apiservers
         #    kubernetes_sd_configs:
         #      - role: endpoints
@@ -467,9 +532,10 @@ config:
   exporters:
     prometheus:
       endpoint: "0.0.0.0:9000"
-      namespace: "{{ .Values.info.namespace }}"
       send_timestamps: true
       metric_expiration: 60m
+      resource_to_telemetry_conversion:
+        enabled: true
     logging:
       loglevel: info
       sampling_initial: 10
@@ -490,7 +556,7 @@ config:
         exporters: [ logging, otlp/global ]
       metrics:
         receivers: [ otlp, prometheus ]
-        processors: [ memory_limiter, batch, resource ]
+        processors: [ memory_limiter, batch, k8sattributes, resource, transform ]
         exporters: [ logging, otlp/global, prometheus ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
@@ -518,34 +584,47 @@ config:
           - k8s.pod.start_time
       # Pod association using resource attributes and connection
       pod_association:
-      - sources:
-          - from: resource_attribute
-            name: ip
-      - sources:
-          - from: resource_attribute
-            name: k8s.pod.ip
-      - sources:
-          - from: resource_attribute
-            name: host.name
-      - sources:
-          - from: connection
-            name: ip
+        - sources:
+            - from: resource_attribute
+              name: ip
+        - sources:
+            - from: resource_attribute
+              name: k8s.pod.ip
+        - sources:
+            - from: resource_attribute
+              name: host.name
+        - sources:
+            - from: connection
+              name: ip
     # loki not support keys with dots - so replace it
     transform:
+      metric_statements:
+        - context: resource
+          statements:
+            - delete_key(attributes, "k8s.deployment.name")
+            - delete_key(attributes, "k8s.daemonset.name")
+            - delete_key(attributes, "k8s.pod.uid")
+            - delete_key(attributes, "k8s.container.restart_count")
+            - set(attributes["job"], attributes["k8s.pod.name"])
+            - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
+            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
+            - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
+            - replace_all_patterns(attributes, "key", "\\.", "_")
       log_statements:
-      - context: resource
-        statements:
-          - delete_key(attributes, "k8s.pod.uid")
-          - delete_key(attributes, "k8s.container.restart_count")
-          - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s.namespace")
-          - replace_all_patterns(attributes, "key", "k8s.pod.name", "k8s_instance")
-          - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
-          - replace_all_patterns(attributes, "key", "\\.", "_")
-      - context: log
-        statements:
-          - delete_key(attributes, "logtag")
-          - delete_key(attributes, "log.file.path")
-          - replace_all_patterns(attributes, "key", "\\.", "_")
+        - context: resource
+          statements:
+            - delete_key(attributes, "k8s.pod.uid")
+            - delete_key(attributes, "k8s.container.restart_count")
+            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "k8s_instance")
+            - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
+            - replace_all_patterns(attributes, "key", "\\.", "_")
+        - context: log
+          statements:
+            - delete_key(attributes, "logtag")
+            - delete_key(attributes, "log.file.path")
+            - replace_all_patterns(attributes, "key", "\\.", "_")
     resource/tempo:
       attributes:
         - key: "service.name"

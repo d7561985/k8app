@@ -480,3 +480,24 @@ spec:
   - port: http-web
     path: "/metrics"
 ```
+
+```asciidoc
+        - type: move
+          from: attributes.stream
+          to: attributes["log.iostream"]
+        - type: move
+          from: attributes.container_name
+          to: resource["k8s.container.name"]
+        - type: move
+          from: attributes.namespace
+          to: resource["k8s.namespace.name"]
+        - type: move
+          from: attributes.pod_name
+          to: resource["k8s.pod.name"]
+        - type: move
+          from: attributes.restart_count
+          to: resource["k8s.container.restart_count"]
+        - type: move
+          from: attributes.uid
+          to: resource["k8s.pod.uid"]
+```
