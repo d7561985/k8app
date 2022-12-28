@@ -104,7 +104,6 @@ receivers:
           scrape_interval: 15s
           static_configs:
             - targets: [ '0.0.0.0:8888' ]
-
     append:
       enabled: false
       scrape_configs: []
@@ -219,11 +218,6 @@ config:
         grpc:
     fluentforward:
       endpoint: 0.0.0.0:24224
-    prometheus: # required only 1 replica
-      config:
-        scrape_configs:
-
-
     filelog:
       include:
         - /var/log/pods/*/*/*.log
