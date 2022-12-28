@@ -119,7 +119,7 @@ receivers:
         # dashboard:ID: 11074 https://grafana.com/grafana/dashboards/11074-node-exporter-for-prometheus-dashboard-en-v20201010/
         # dashboard: ID: 1860 https://grafana.com/grafana/dashboards/1860-node-exporter-full/
         - job_name: serviceMonitor/monitoring/prometheus-prometheus-node-exporter
-          scrape_interval: 15s
+          #scrape_interval: 15s
           honor_labels: false
           kubernetes_sd_configs:
             - role: pod
