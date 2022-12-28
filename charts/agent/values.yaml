@@ -87,13 +87,129 @@ tolerations: [ ]
 
 affinity: { }
 
-structuredConfig: { }
 
 # required AWS SSM parameter store certificates
 certs:
   "ca.crt": "ca.crt"
   "client.crt": "client.crt"
   "client.key": "client.key"
+
+receivers:
+  prometheus:
+    default:
+      enabled: true
+      scrape_configs:
+        # dashboard: ID: 17723 https://grafana.com/grafana/dashboards/17723-opentelemetry-collector/
+        - job_name: "{{ .Values.info.name }}"
+          scrape_interval: 15s
+          static_configs:
+            - targets: [ '0.0.0.0:8888' ]
+
+    append:
+      enabled: false
+      scrape_configs: []
+
+    kubernetes:
+      enabled: true
+      scrape_configs:
+        # required helm name: node-exporter
+        # example: up{container="node-exporter",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",namespace="monitoring",pod="node-exporter-prometheus-node-exporter-svg2b"} 1 1672147386763
+        #       => up{deployment_environment="test",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container_name="node-exporter",k8s_daemonset_name="node-exporter-prometheus-node-exporter",k8s_namespace_name="monitoring",k8s_node_name="ip-10-0-2-193.eu-central-1.compute.internal",k8s_pod_name="node-exporter-prometheus-node-exporter-svg2b",k8s_pod_uid="c2c6ae55-a746-43cf-bc4c-7b1af050726a",license="test",namespace="test",net_host_name="10.0.2.193",origin_prometheus="prometheus01",service_instance_id="10.0.2.193:9100",service_name="node-exporter-prometheus-node-exporter-svg2b"} 1 1672154051968
+        #       => up{deployment_environment="test",instance="node-exporter-prometheus-node-exporter-svg2b",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container="node-exporter",k8s_namespace="monitoring",license="test",namespace="test",net_host_name="10.0.2.193",nodename="ip-10-0-2-193.eu-central-1.compute.internal",origin_prometheus="test_test_test",service_instance_id="10.0.2.193:9100",service_name="serviceMonitor/monitoring/prometheus-prometheus-node-exporter"} 1 1672156467807
+        #
+        # dashboard:ID: 11074 https://grafana.com/grafana/dashboards/11074-node-exporter-for-prometheus-dashboard-en-v20201010/
+        # dashboard: ID: 1860 https://grafana.com/grafana/dashboards/1860-node-exporter-full/
+        - job_name: serviceMonitor/monitoring/prometheus-prometheus-node-exporter
+          scrape_interval: 15s
+          honor_labels: false
+          kubernetes_sd_configs:
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
+          scheme: http
+          relabel_configs:
+            - action: keep
+              source_labels:
+                - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
+              regex: (node-exporter);true
+            - action: keep
+              source_labels:
+                - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
+              regex: (prometheus-node-exporter);true
+            - source_labels: [ __address__, __meta_kubernetes_pod_annotation_prometheus_io_port ]
+              action: replace
+              target_label: __address__
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $$1:$$2
+            - action: drop
+              source_labels:
+                - __meta_kubernetes_pod_phase
+              regex: (Failed|Succeeded)
+            - action: replace
+              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              target_label: origin_prometheus
+          metric_relabel_configs: [ ]
+        # required helm name: kube-state-metrics
+        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
+        # dashboard ID: 13332
+        - job_name: serviceMonitor/monitoring/prometheus-kube-state-metrics
+          honor_labels: false
+          kubernetes_sd_configs:
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
+          relabel_configs:
+            - action: keep
+              source_labels:
+                - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
+              regex: (kube-state-metrics);true
+            - action: keep
+              source_labels:
+                - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
+              regex: (kube-state-metrics);true
+            - action: drop
+              source_labels:
+                - __meta_kubernetes_pod_phase
+              regex: (Failed|Succeeded)
+            - action: replace
+              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              target_label: cluster
+        # coredns
+        # https://grafana.com/grafana/dashboards/14981-coredns/
+        # dashboard ID: 14981
+        # https://grafana.com/grafana/dashboards/15762-kubernetes-system-coredns/
+        # dashboard ID: 15762
+        - job_name: coredns
+          honor_labels: true
+          kubernetes_sd_configs:
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
+          relabel_configs:
+            - action: keep
+              source_labels: # k8s-app: kube-dns
+                - __meta_kubernetes_pod_label_k8s_app
+                - __meta_kubernetes_pod_labelpresent_k8s_app
+              regex: (kube-dns);true
+            - source_labels: [ __address__ ]
+              action: replace
+              target_label: __address__
+              regex: (.+?)(?::\d+)?
+              replacement: $$1:9153
+            - action: drop
+              source_labels:
+                - __meta_kubernetes_pod_phase
+              regex: (Failed|Succeeded)
 
 config:
   receivers:
@@ -106,112 +222,8 @@ config:
     prometheus: # required only 1 replica
       config:
         scrape_configs:
-          # dashboard: ID: 17723 https://grafana.com/grafana/dashboards/17723-opentelemetry-collector/
-          - job_name: "{{ .Values.info.name }}"
-            scrape_interval: 15s
-            static_configs:
-              - targets: [ '0.0.0.0:8888' ]
-          # required helm name: node-exporter
-          # example: up{container="node-exporter",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",namespace="monitoring",pod="node-exporter-prometheus-node-exporter-svg2b"} 1 1672147386763
-          #       => up{deployment_environment="test",instance="10.0.2.193:9100",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container_name="node-exporter",k8s_daemonset_name="node-exporter-prometheus-node-exporter",k8s_namespace_name="monitoring",k8s_node_name="ip-10-0-2-193.eu-central-1.compute.internal",k8s_pod_name="node-exporter-prometheus-node-exporter-svg2b",k8s_pod_uid="c2c6ae55-a746-43cf-bc4c-7b1af050726a",license="test",namespace="test",net_host_name="10.0.2.193",origin_prometheus="prometheus01",service_instance_id="10.0.2.193:9100",service_name="node-exporter-prometheus-node-exporter-svg2b"} 1 1672154051968
-          #       => up{deployment_environment="test",instance="node-exporter-prometheus-node-exporter-svg2b",job="node-exporter-prometheus-node-exporter-svg2b",k8s_container="node-exporter",k8s_namespace="monitoring",license="test",namespace="test",net_host_name="10.0.2.193",nodename="ip-10-0-2-193.eu-central-1.compute.internal",origin_prometheus="test_test_test",service_instance_id="10.0.2.193:9100",service_name="serviceMonitor/monitoring/prometheus-prometheus-node-exporter"} 1 1672156467807
-          #
-          # dashboard:ID: 11074 https://grafana.com/grafana/dashboards/11074-node-exporter-for-prometheus-dashboard-en-v20201010/
-          # dashboard: ID: 1860 https://grafana.com/grafana/dashboards/1860-node-exporter-full/
-          - job_name: serviceMonitor/monitoring/prometheus-prometheus-node-exporter
-            scrape_interval: 15s
-            honor_labels: false
-            kubernetes_sd_configs:
-              - role: pod
-                selectors:
-                  - role: pod
-                    # only scrape data from pods running on the same node as collector
-                    field: "spec.nodeName=$NODE_NAME"
-            scheme: http
-            relabel_configs:
-              - action: keep
-                source_labels:
-                  - __meta_kubernetes_pod_label_app_kubernetes_io_instance
-                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
-                regex: (node-exporter);true
-              - action: keep
-                source_labels:
-                  - __meta_kubernetes_pod_label_app_kubernetes_io_name
-                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
-                regex: (prometheus-node-exporter);true
-              - source_labels: [ __address__, __meta_kubernetes_pod_annotation_prometheus_io_port ]
-                action: replace
-                target_label: __address__
-                regex: (.+?)(?::\d+)?;(\d+)
-                replacement: $$1:$$2
-              - action: drop
-                source_labels:
-                  - __meta_kubernetes_pod_phase
-                regex: (Failed|Succeeded)
-              - action: replace
-                replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-                target_label: origin_prometheus
-            metric_relabel_configs: [ ]
-          # required helm name: kube-state-metrics
-          # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
-          # dashboard ID: 13332
-          - job_name: serviceMonitor/monitoring/prometheus-kube-state-metrics
-            honor_labels: false
-            kubernetes_sd_configs:
-              - role: pod
-                selectors:
-                  - role: pod
-                    # only scrape data from pods running on the same node as collector
-                    field: "spec.nodeName=$NODE_NAME"
-            relabel_configs:
-              - action: keep
-                source_labels:
-                  - __meta_kubernetes_pod_label_app_kubernetes_io_instance
-                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
-                regex: (kube-state-metrics);true
-              - action: keep
-                source_labels:
-                  - __meta_kubernetes_pod_label_app_kubernetes_io_name
-                  - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
-                regex: (kube-state-metrics);true
-              - action: drop
-                source_labels:
-                  - __meta_kubernetes_pod_phase
-                regex: (Failed|Succeeded)
-              - action: replace
-                replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-                target_label: cluster
-          # coredns
-          # https://grafana.com/grafana/dashboards/14981-coredns/
-          # dashboard ID: 14981
-          # https://grafana.com/grafana/dashboards/15762-kubernetes-system-coredns/
-          # dashboard ID: 15762
-          - job_name: coredns
-            honor_labels: true
-            kubernetes_sd_configs:
-              - role: pod
-                selectors:
-                  - role: pod
-                    # only scrape data from pods running on the same node as collector
-                    field: "spec.nodeName=$NODE_NAME"
-            relabel_configs:
-              - action: keep
-                source_labels: # k8s-app: kube-dns
-                  - __meta_kubernetes_pod_label_k8s_app
-                  - __meta_kubernetes_pod_labelpresent_k8s_app
-                regex: (kube-dns);true
-              - source_labels: [ __address__]
-                action: replace
-                target_label: __address__
-                regex: (.+?)(?::\d+)?
-                replacement: $$1:9153
-              - action: drop
-                source_labels:
-                  - __meta_kubernetes_pod_phase
-                regex: (Failed|Succeeded)
-              - action: replace
-                replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-                target_label: cluster
+
+
     filelog:
       include:
         - /var/log/pods/*/*/*.log
