@@ -99,7 +99,7 @@ receivers:
     default:
       enabled: true
       scrape_configs:
-        # dashboard: ID: 17723 https://grafana.com/grafana/dashboards/17723-opentelemetry-collector/
+        # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector/
         - job_name: "{{ .Values.info.name }}"
           scrape_interval: 15s
           static_configs:
