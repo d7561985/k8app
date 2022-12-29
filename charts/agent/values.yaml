@@ -427,19 +427,3 @@ config:
       check_interval: 2s
       limit_mib: 1000
       spike_limit_mib: 200
-
-  file: |
-    receivers:
-    {{ tpl (toYaml .Values.config.receivers) . | nindent 2 }}
-
-    exporters:
-    {{ tpl (toYaml .Values.config.exporters) . | nindent 2 }}
-
-    processors:
-    {{ tpl (toYaml .Values.config.processors) . | nindent 2 }}
-    
-    extensions:
-    {{ tpl (toYaml .Values.config.extensions) . | nindent 2 }}
-    
-    service:
-    {{ tpl (toYaml .Values.config.service) . | nindent 2 }}

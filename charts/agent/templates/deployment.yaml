@@ -18,7 +18,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ tpl .Values.config.file . | sha256sum }}
+        checksum/config: {{ tpl (toYaml .Values.config) . | sha256sum }}
+        checksum/receivers: {{ tpl (toYaml .Values.receivers) . | sha256sum }}
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
