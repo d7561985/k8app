@@ -297,7 +297,7 @@ config:
       resource_to_telemetry_conversion:
         enabled: true
     logging:
-      verbosity: none
+      verbosity: 0
       sampling_initial: 10
       sampling_thereafter: 50
     otlp/global:
