@@ -9,6 +9,7 @@ metadata:
   labels:
     {{- include "agent.labels" . | nindent 4 }}
 spec:
+  revisionHistoryLimit: 1
  {{- if not .Values.IsDaemonSet}}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
