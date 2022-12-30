@@ -214,8 +214,8 @@ config:
   receivers:
     otlp:
       protocols:
-        http:
-        grpc:
+        http: {}
+        grpc: {}
     fluentforward:
       endpoint: 0.0.0.0:24224
     filelog:
