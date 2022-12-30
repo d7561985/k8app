@@ -312,15 +312,15 @@ config:
     pipelines:
       traces:
         receivers: [ otlp ]
-        processors: [ memory_limiter, batch, resource, resource/tempo ]
+        processors: [ resource, resource/tempo, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
       metrics:
         receivers: [ otlp, prometheus ]
-        processors: [ memory_limiter, batch, resource, transform ]
+        processors: [ resource, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global, prometheus ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
-        processors: [ memory_limiter, batch, k8sattributes, resource, transform ]
+        processors: [ k8sattributes, resource, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
   extensions:
     health_check:
@@ -413,7 +413,7 @@ config:
     batch:
       send_batch_size: 1000
       send_batch_max_size: 3000
-      timeout: 15s
+      timeout: 200ms
     # Enabling the memory_limiter is strongly recommended for every pipeline.
     # Configuration is based on the amount of memory allocated to the collector.
     # The configuration below assumes 2GB of memory. In general, the ballast
@@ -424,6 +424,6 @@ config:
     # information, see
     # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
     memory_limiter:
-      check_interval: 2s
+      check_interval: 1s
       limit_mib: 1000
-      spike_limit_mib: 200
+      spike_limit_mib: 300
