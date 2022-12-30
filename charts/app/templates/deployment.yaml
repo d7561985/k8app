@@ -159,10 +159,10 @@ spec:
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: Always
         name: {{ $appname }}
+        {{- with .Values.lifecycle}}
         lifecycle:
-          preStop:
-            exec:
-              command: ["sleep","10"]
+{{ toYaml . | indent 10 }}
+        {{- end}}
     {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
