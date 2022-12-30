@@ -297,6 +297,7 @@ config:
       resource_to_telemetry_conversion:
         enabled: true
     logging:
+      verbosity: basic
       loglevel: info
       sampling_initial: 10
       sampling_thereafter: 50
@@ -370,7 +371,6 @@ config:
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
-            - replace_all_patterns(attributes, "key", "\\.", "_")
       log_statements:
         - context: resource
           statements:
