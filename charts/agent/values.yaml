@@ -297,8 +297,7 @@ config:
       resource_to_telemetry_conversion:
         enabled: true
     logging:
-      verbosity: basic
-      loglevel: info
+      verbosity: none
       sampling_initial: 10
       sampling_thereafter: 50
     otlp/global:
@@ -413,7 +412,7 @@ config:
     batch:
       send_batch_size: 1000
       send_batch_max_size: 3000
-      timeout: 200ms
+      timeout: 15s
     # Enabling the memory_limiter is strongly recommended for every pipeline.
     # Configuration is based on the amount of memory allocated to the collector.
     # The configuration below assumes 2GB of memory. In general, the ballast
