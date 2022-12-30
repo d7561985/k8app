@@ -187,7 +187,7 @@ receivers:
         # https://grafana.com/grafana/dashboards/15762-kubernetes-system-coredns/
         # dashboard ID: 15762
         - job_name: coredns
-          honor_labels: true
+          honor_labels: false
           kubernetes_sd_configs:
             - role: pod
               selectors:
