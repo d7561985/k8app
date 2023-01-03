@@ -158,6 +158,15 @@ spec:
           {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: Always
+        {{- if or .Values.resources }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+        {{- end }}
         name: {{ $appname }}
         {{- with .Values.lifecycle}}
         lifecycle:

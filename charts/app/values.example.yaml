@@ -30,3 +30,11 @@ volume:
       parameters:
         type: gp3
         iops: "3000"
+
+resources:
+  limits:
+    memory: 1024Mi
+    cpu: 200m
+  requests:
+    memory: 128Mi
+    cpu: 100m
