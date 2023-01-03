@@ -2,6 +2,10 @@
 
 ## app
 
+### 3.1.3
+* deployment: resources request/limits 
+
+
 ### 3.1.2
 * deployment: lifecycle option moved to values. Because our distress doesn't have any sleep command we should consider dont use it as hardcode
 
