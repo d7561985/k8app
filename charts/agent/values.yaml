@@ -80,7 +80,6 @@ resources:
   #   cpu: 100m
   #   memory: 128Mi
 
-
 nodeSelector: { }
 
 tolerations: [ ]
@@ -118,7 +117,7 @@ receivers:
         #
         # dashboard:ID: 11074 https://grafana.com/grafana/dashboards/11074-node-exporter-for-prometheus-dashboard-en-v20201010/
         # dashboard: ID: 1860 https://grafana.com/grafana/dashboards/1860-node-exporter-full/
-        - job_name: serviceMonitor/monitoring/prometheus-prometheus-node-exporter
+        - job_name: prometheus-node-exporter
           #scrape_interval: 15s
           honor_labels: false
           kubernetes_sd_configs:
@@ -155,7 +154,7 @@ receivers:
         # required helm name: kube-state-metrics
         # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
         # dashboard ID: 13332
-        - job_name: serviceMonitor/monitoring/prometheus-kube-state-metrics
+        - job_name: kube-state-metrics
           honor_labels: false
           kubernetes_sd_configs:
             - role: pod
@@ -209,7 +208,52 @@ receivers:
               source_labels:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
-
+        # search pods containing prometheus.io/scrape annotation
+        #
+        # example:
+        # prometheus.io/path: /metrics
+        # prometheus.io/port: "7777"
+        # prometheus.io/scrape: "true"
+        # prometheus.io/param: "xxx=yyy"
+        - job_name: kubernetes-pods
+          kubernetes_sd_configs:
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
+          honor_labels: false
+          relabel_configs:
+            - action: keep
+              regex: true
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+            - action: replace
+              regex: (https?)
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_scheme
+              target_label: __scheme__
+            - action: replace
+              regex: (.+)
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_path
+              target_label: __metrics_path__
+            - action: replace
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $$1:$$2
+              source_labels:
+                - __address__
+                - __meta_kubernetes_pod_annotation_prometheus_io_port
+              target_label: __address__
+            - action: labelmap
+              regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
+              replacement: __param_$$1
+            #            - action: labelmap
+            #              regex: __meta_kubernetes_pod_label_(.+)
+            - action: drop
+              regex: Pending|Succeeded|Failed|Completed
+              source_labels:
+                - __meta_kubernetes_pod_phase
 config:
   receivers:
     otlp:
@@ -361,11 +405,10 @@ config:
       metric_statements:
         - context: resource
           statements:
-            - delete_key(attributes, "k8s.deployment.name")
-            - delete_key(attributes, "k8s.daemonset.name")
+            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset).name", "resource")
+            - replace_all_patterns(attributes, "key", "service.name", "job")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
-            - set(attributes["job"], attributes["service.name"])
             - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
@@ -376,7 +419,7 @@ config:
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
-            - replace_all_patterns(attributes, "key", "k8s.pod.name", "k8s_instance")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
             - replace_all_patterns(attributes, "key", "\\.", "_")
         - context: log
