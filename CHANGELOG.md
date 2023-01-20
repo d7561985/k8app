@@ -2,6 +2,9 @@
 
 ## app
 
+### 3.1.5
+* fix resources with partial implementation
+
 ### 3.1.4
 * tel variable VERSION support
 
