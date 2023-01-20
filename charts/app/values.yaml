@@ -1,6 +1,7 @@
 environment: ""
 appName: ""
 branch: ""
+version: ""
 nodeSelector: {}
 tolerations: {}
 jaegerEnabled: false

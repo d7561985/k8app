@@ -2,6 +2,9 @@
 
 ## app
 
+### 3.1.4
+* tel variable VERSION support
+
 ### 3.1.3
 * deployment: resources request/limits 
 

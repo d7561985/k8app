@@ -116,6 +116,8 @@ spec:
           value: {{ .Values.appName }}
         - name: OTEL_SERVICE_NAME
           value: {{ .Values.appName }}
+        - name: VERSION
+          value: {{default .Values.image.tag .Values.version }}
     {{- if .Values.jaegerEnabled }}
         - name: JAEGER_AGENT_BINARY_PORT
           value: "6832"
