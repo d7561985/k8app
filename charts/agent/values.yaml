@@ -367,7 +367,7 @@ config:
         processors: [ k8sattributes, resource, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
   extensions:
-    health_check:
+    health_check: {}
     pprof:
       endpoint: :1888
     zpages:
