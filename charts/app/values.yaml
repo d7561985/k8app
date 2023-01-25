@@ -4,6 +4,10 @@ branch: ""
 version: ""
 nodeSelector: {}
 tolerations: {}
+#  - key: "key1"
+#    operator: "Equal"
+#    value: "value1"
+#    effect: "NoSchedule"
 jaegerEnabled: false
 commands: []
 args: []

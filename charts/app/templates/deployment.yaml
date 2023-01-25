@@ -43,6 +43,10 @@ spec:
         appver: "{{ .Values.image.tag }}"
         release: "{{ .Release.Name }}"
     spec:
+      {{- with .Values.tolerations}}
+      tolerations:
+{{. | toYaml | indent 8}}
+      {{- end}}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

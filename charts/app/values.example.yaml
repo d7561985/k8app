@@ -38,3 +38,9 @@ resources:
   requests:
     memory: 128Mi
     cpu: 100m
+
+tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"

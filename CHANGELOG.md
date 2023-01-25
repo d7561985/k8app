@@ -2,6 +2,8 @@
 
 ## app
 
+### 3.1.6
+* toleration for deployment
 ### 3.1.5
 * fix resources with partial implementation
 
