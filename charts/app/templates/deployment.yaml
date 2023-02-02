@@ -31,6 +31,9 @@ spec:
     {{- if .Values.branch }}
         app/branch: {{ default "" .Values.branch |quote }}
     {{- end }}
+    {{- if .Values.version }}
+        app/version: {{ default "0.0.0" .Values.version |quote }}
+    {{- end }}
     {{- if .Values.prometheus.enabled }}
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.prometheus.port | quote | default "8011" }}
