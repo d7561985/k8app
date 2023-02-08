@@ -92,6 +92,7 @@ job:
   enabled: false
   spec: {}
   # printenv:
+  #   backoffLimit: 1
   #   command: ["printenv"]
   #   args: ["HOSTNAME", "PATH"]
   # host:
