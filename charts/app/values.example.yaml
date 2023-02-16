@@ -17,6 +17,15 @@ worker:
   command: ["printenv"]
   args: ["HOSTNAME","PATH"]
 
+job:
+  enabled: true
+  spec:
+    migrate-db:
+      backoffLimit: 1
+      command:
+      - /app/db
+      - migrate
+
 volume:
   enabled: true
   mountPath: "/my-path"

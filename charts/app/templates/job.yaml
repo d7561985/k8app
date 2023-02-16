@@ -18,7 +18,7 @@ metadata:
     release: "{{ $.Release.Name }}"
   name: "{{ $jobName }}-{{ $key }}"
 spec:
-  backoffLimit: 10
+  backoffLimit: {{ default 10 $value.backoffLimit }}
   completions: 1
   parallelism: 1
   template:
