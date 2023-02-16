@@ -32,6 +32,9 @@ service:
 
 serviceExternal:
   enabled: false
+  # Optional annotations to be applied to service (e.g. to set AWS LB attributes)
+  annotations: {}
+    # service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "900"
 
 serviceHeadless:
   enabled: false
