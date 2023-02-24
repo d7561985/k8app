@@ -13,6 +13,7 @@ metadata:
   name: {{ template "storageClass" . }}
 provisioner: {{.Values.volume.storageClass.create.provisioner | default "kubernetes.io/aws-ebs" }}
 volumeBindingMode: WaitForFirstConsumer
+{{ with .Values.volume.storageClass.create.mountOptions }}
 parameters:
   {{- if not (empty .Values.volume.storageClass.create.parameters)}}
 {{toYaml .Values.volume.storageClass.create.parameters | indent 2}}
