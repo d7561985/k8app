@@ -2,6 +2,9 @@
 
 ## app
 
+### 3.1.7
+* EFS implementation
+
 ### 3.1.6
 * toleration for deployment
 ### 3.1.5
