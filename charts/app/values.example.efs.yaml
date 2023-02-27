@@ -1,0 +1,63 @@
+appName: "nginx"
+environment: dev
+
+image:
+  repository: "nginx"
+  tag: "latest"
+
+configmap:
+  DEBUG: 'true'
+
+secrets:
+  SERVER_ADD: "/server/addr"
+
+worker:
+  enabled: true
+  replicas: 2
+  command: ["printenv"]
+  args: ["HOSTNAME","PATH"]
+
+job:
+  enabled: true
+  spec:
+    migrate-db:
+      backoffLimit: 1
+      command:
+      - /app/db
+      - migrate
+
+volume:
+  enabled: true
+  mountPath: "/my-path"
+  resources:
+    requests:
+      storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  storageClass:
+    name: sc
+    create:
+      mountOptions:
+        - tls
+      provisioner: "efs.csi.aws.com"
+      parameters:
+        provisioningMode: efs-ap
+        fileSystemId: fs-0c0dcd94ecc6637aa
+        directoryPerms: "777"
+        gidRangeStart: "1000"
+        gidRangeEnd: "2000"
+        basePath: "/app"
+
+resources:
+  limits:
+    memory: 1024Mi
+    cpu: 200m
+  requests:
+    memory: 128Mi
+    cpu: 100m
+
+tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"

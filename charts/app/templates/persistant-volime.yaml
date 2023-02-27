@@ -12,7 +12,7 @@ metadata:
   name: {{ template "persistantClaim" .}}
 spec:
   accessModes:
-    - ReadWriteOnce
+    {{ toYaml  .Values.volume.accessModes }}
   storageClassName: {{ template "storageClass" . }}
   resources:
     requests:
