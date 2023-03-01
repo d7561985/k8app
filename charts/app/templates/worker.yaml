@@ -75,7 +75,7 @@ spec:
         volumeMounts:
           {{- if $root.Values.volume.enabled }}
           - name: {{template "persistantClaim" $root }}
-            mountPath: {{ $root.Values.volume.mountPath}}
+            mountPath: {{ $root.Values.volume.mount.path }}
           {{- end -}}
           {{- if $root.Values.secrets }}
           - name: secrets-store-inline

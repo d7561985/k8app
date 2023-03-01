@@ -28,7 +28,8 @@ job:
 
 volume:
   enabled: true
-  mountPath: "/my-path"
+  mount:
+    path: "/my-path"
   resources:
     requests:
       storage: 2Gi

@@ -201,7 +201,9 @@ alerting: {}
 
 volume:
   enabled: false
-  mountPath: /data
+  mount:
+    readOnly: true
+    path: /data
   accessModes:
     - ReadWriteOnce
   resources:

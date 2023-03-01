@@ -68,7 +68,7 @@ spec:
         {{- if .Values.volume.enabled }}
         - name: {{template "persistantClaim" . }}
           persistentVolumeClaim:
-            readOnly: true
+            readOnly: {{.Values.volume.mount.readOnly}}
             claimName: {{template "persistantClaim" . }}
         {{- end -}}
     {{- if .Values.secrets }}
@@ -105,7 +105,8 @@ spec:
           volumeMounts:
             {{- if .Values.volume.enabled }}
             - name: {{template "persistantClaim" . }}
-              mountPath: {{ .Values.volume.mountPath}}
+              mountPath: {{ .Values.volume.mount.path}}
+              readOnly: {{.Values.volume.mount.readOnly}}
             {{- end -}}
             {{- if .Values.secrets }}
             - name: secrets-store-inline
@@ -154,8 +155,8 @@ spec:
         volumeMounts:
           {{- if .Values.volume.enabled }}
           - name: {{template "persistantClaim" . }}
-            mountPath: {{ .Values.volume.mountPath}}
-            readOnly: true
+            mountPath: {{ .Values.volume.mount.path}}
+            readOnly: {{.Values.volume.mount.readOnly}}
           {{- end -}}
           {{- if .Values.secrets }}
           - name: secrets-store-inline

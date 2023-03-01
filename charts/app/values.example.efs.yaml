@@ -28,10 +28,12 @@ job:
 
 volume:
   enabled: true
-  mountPath: "/my-path"
   resources:
     requests:
       storage: 2Gi
+  mount:
+    readOnly: false
+    path: "/my-path"
   accessModes:
     - ReadWriteMany
   storageClass:

@@ -2,6 +2,10 @@
 
 ## app
 
+### 3.1.10
+* volume ReadOnly option required for EFS
+* refactor value mountPath
+
 ### 3.1.9
 * EFS implementation
 
