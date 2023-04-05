@@ -98,11 +98,11 @@ receivers:
     default:
       enabled: true
       scrape_configs:
-        # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
-        - job_name: "{{ .Values.info.name }}"
-          scrape_interval: 15s
-          static_configs:
-            - targets: [ '0.0.0.0:8888' ]
+          # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
+#          - job_name: "{{ .Values.info.name }}"
+#            scrape_interval: 15s
+#            static_configs:
+#              - targets: [ '0.0.0.0:8888' ]
     append:
       enabled: false
       scrape_configs: []
@@ -398,10 +398,14 @@ config:
         receivers: [ otlp ]
         processors: [ resource, resource/tempo, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
-      metrics:
-        receivers: [ otlp ]
+      metrics/2:
+        receivers: [ prometheus ]
         processors: [ resource, transform, memory_limiter ]
-        exporters: [ logging, otlp/global, prometheus ]
+        exporters: [ logging, otlp/global ]
+      metrics:
+        receivers: [ otlp,  ]
+        processors: [ resource, transform, memory_limiter ]
+        exporters: [ logging, otlp/global ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
         processors: [ k8sattributes, resource, attributes/loki, resource/loki, transform, memory_limiter, batch ]

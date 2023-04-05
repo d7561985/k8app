@@ -10,7 +10,7 @@ data:
       prometheus:
         config:
           scrape_configs:
-{{- if .Values.receivers.prometheus.default.enabled}}
+{{- if and .Values.receivers.prometheus.default.enabled ( not (empty .Values.receivers.prometheus.default.scrape_configs)) }}
 {{- tpl (toYaml .Values.receivers.prometheus.default.scrape_configs) . | nindent 12 }}
 {{- end}}
 {{- if .Values.receivers.prometheus.kubernetes.enabled}}
