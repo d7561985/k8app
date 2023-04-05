@@ -52,4 +52,7 @@
 ## Agent
 ### 0.5.17
 * scrap agent metrics from service discovery
-* loki tags for correct processing 
+* loki tags for correct processing
+### 0.5.18
+* not use prometheus reseiver
+* tune otlp connection

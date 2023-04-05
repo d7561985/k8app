@@ -99,10 +99,10 @@ receivers:
       enabled: true
       scrape_configs:
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
-#        - job_name: "{{ .Values.info.name }}"
-#          scrape_interval: 15s
-#          static_configs:
-#            - targets: [ '0.0.0.0:8888' ]
+        - job_name: "{{ .Values.info.name }}"
+          scrape_interval: 15s
+          static_configs:
+            - targets: [ '0.0.0.0:8888' ]
     append:
       enabled: false
       scrape_configs: []
@@ -382,7 +382,15 @@ config:
       tls:
         ca_file: /certs/ca.crt
         cert_file: /certs/client.crt
-        key_file: /certs/client.key
+      sending_queue:
+        enabled: true
+        num_consumers: 20
+        queue_size: 1000
+      retry_on_failure:
+        enabled: false
+        initial_interval: 1s
+        max_interval: 10s
+        max_elapsed_time: 20s
   service:
     extensions: [ pprof, zpages, health_check ]
     pipelines:
@@ -391,7 +399,7 @@ config:
         processors: [ resource, resource/tempo, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
       metrics:
-        receivers: [ otlp, prometheus ]
+        receivers: [ otlp ]
         processors: [ resource, transform, memory_limiter ]
         exporters: [ logging, otlp/global, prometheus ]
       logs:
