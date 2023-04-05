@@ -396,7 +396,7 @@ config:
         exporters: [ logging, otlp/global, prometheus ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
-        processors: [ k8sattributes, resource, transform, memory_limiter, batch ]
+        processors: [ k8sattributes, resource, attributes/loki, resource/loki, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
   extensions:
     health_check: {}
@@ -456,6 +456,7 @@ config:
             - replace_all_patterns(attributes, "key", "\\.", "_")
         - context: log
           statements:
+            - set(resource.attributes["loki.format"], "logfmt") where severity_text != "" # backport compatibility tel < 2.2.0
             - delete_key(attributes, "logtag")
             - delete_key(attributes, "log.file.path")
             - replace_all_patterns(attributes, "key", "\\.", "_")
@@ -466,6 +467,19 @@ config:
           action: insert
         - key: "service"
           action: delete
+    attributes/loki:
+      actions:
+        - action: insert
+          key: loki.attribute.labels
+          value: level
+    resource/loki:
+      attributes:
+#        - action: insert
+#          key: loki.format
+#          value: logfmt
+        - action: insert
+          key: loki.resource.labels
+          value: resource, service, namespace, license, deployment_environment, k8s_namespace, k8s_container, aws_region
     resource:
       attributes:
         - action: upsert

@@ -52,3 +52,4 @@
 ## Agent
 ### 0.5.16
 * scrap agent metrics from service discovery
+* loki tags for correct processing 
