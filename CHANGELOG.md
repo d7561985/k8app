@@ -50,6 +50,6 @@
 
 
 ## Agent
-### 0.5.16
+### 0.5.17
 * scrap agent metrics from service discovery
 * loki tags for correct processing 
