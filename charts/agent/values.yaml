@@ -398,12 +398,8 @@ config:
         receivers: [ otlp ]
         processors: [ resource, resource/tempo, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
-      metrics/2:
-        receivers: [ prometheus ]
-        processors: [ resource, transform, memory_limiter ]
-        exporters: [ logging, otlp/global ]
       metrics:
-        receivers: [ otlp,  ]
+        receivers: [ otlp,  prometheus]
         processors: [ resource, transform, memory_limiter ]
         exporters: [ logging, otlp/global ]
       logs:
