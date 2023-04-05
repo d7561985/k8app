@@ -466,13 +466,13 @@ config:
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
-            - replace_all_patterns(attributes, "key", "\\.", "_")
+#            - replace_all_patterns(attributes, "key", "\\.", "_")
         - context: log
           statements:
             - set(resource.attributes["loki.format"], "logfmt") where severity_text != "" # backport compatibility tel < 2.2.0
             - delete_key(attributes, "logtag")
             - delete_key(attributes, "log.file.path")
-            - replace_all_patterns(attributes, "key", "\\.", "_")
+#            - replace_all_patterns(attributes, "key", "\\.", "_")
     resource/tempo:
       attributes:
         - key: "service.name"
