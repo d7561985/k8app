@@ -21,6 +21,7 @@ spec:
       annotations:
         checksum/config: {{ tpl (toYaml .Values.config) . | sha256sum }}
         checksum/receivers: {{ tpl (toYaml .Values.receivers) . | sha256sum }}
+        "prometheus.io/port": "8888"
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}

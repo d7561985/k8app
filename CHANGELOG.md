@@ -47,3 +47,8 @@
 ### 3.0.3
 * secrets should redeploy every new secret changes or when tag is changed
 * example values, min working values 
+
+
+## Agent
+### 0.5.16
+* scrap agent metrics from service discovery
