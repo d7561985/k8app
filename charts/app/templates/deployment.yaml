@@ -116,13 +116,13 @@ spec:
       containers:
       - env:
         - name: BUILD_ID
-          value: {{ default "000" .Values.buildId  | quote }}
+          value: {{ default "000" .Values.buildId | quote }}
         - name: PROJECT
           value: {{ .Values.appName }}
         - name: OTEL_SERVICE_NAME
           value: {{ .Values.appName }}
         - name: VERSION
-          value: {{default .Values.image.tag .Values.version }}
+          value: {{ default .Values.image.tag .Values.version | quote }}
     {{- if .Values.jaegerEnabled }}
         - name: JAEGER_AGENT_BINARY_PORT
           value: "6832"
