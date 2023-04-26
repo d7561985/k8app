@@ -238,6 +238,22 @@ receivers:
               source_labels:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
+        - job_name: 'kubernetes-kubelet'
+          scrape_interval: 1m
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - target_label: __address__
+              replacement: kubernetes.default.svc.cluster.local:443
+            - source_labels: [ __meta_kubernetes_node_name ]
+              regex: (.+)
+              target_label: __metrics_path__
+              replacement: /api/v1/nodes/$$1/proxy/metrics
         # search pods containing prometheus.io/scrape annotation
         #
         # example:
@@ -383,6 +399,7 @@ config:
         ca_file: /certs/ca.crt
         cert_file: /certs/client.crt
         key_file: /certs/client.key
+        server_name_override:  xxx
       sending_queue:
         enabled: true
         num_consumers: 20
@@ -401,11 +418,11 @@ config:
         exporters: [ logging, otlp/global ]
       metrics/2:
         receivers: [ prometheus ]
-        processors: [ resource, transform, memory_limiter ]
+        processors: [ resource, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
       metrics:
         receivers: [ otlp,  ]
-        processors: [ resource, transform, memory_limiter ]
+        processors: [ resource, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [ fluentforward, otlp, filelog ]
@@ -515,9 +532,9 @@ config:
           from_attribute: "host.name"
           action: upsert
     batch:
-      send_batch_size: 1000
-      send_batch_max_size: 3000
-      timeout: 15s
+      send_batch_size: 100
+      send_batch_max_size: 1000
+      timeout: 15ms
     # Enabling the memory_limiter is strongly recommended for every pipeline.
     # Configuration is based on the amount of memory allocated to the collector.
     # The configuration below assumes 2GB of memory. In general, the ballast

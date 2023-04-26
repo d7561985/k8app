@@ -50,6 +50,9 @@
 
 
 ## Agent
+### 0.5.23
+* kubernetes-kubelet finally
+
 ### 0.5.17
 * scrap agent metrics from service discovery
 * loki tags for correct processing
