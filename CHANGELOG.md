@@ -50,7 +50,7 @@
 
 
 ## Agent
-### 0.5.23
+### 0.5.23-24, 
 * kubernetes-kubelet finally
 
 ### 0.5.17
