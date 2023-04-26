@@ -270,6 +270,9 @@ receivers:
               regex: (.+)
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$$1/proxy/metrics/resource
+            - action: replace
+              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              target_label: cluster
         # search pods containing prometheus.io/scrape annotation
         #
         # example:
