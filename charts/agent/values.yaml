@@ -254,7 +254,7 @@ receivers:
               regex: (.+)
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$$1/proxy/metrics
-        - job_name: 'kubernetes-resource'
+        - job_name: 'kubernetes-cadvisor'
           scrape_interval: 15s
           scheme: https
           tls_config:
@@ -269,7 +269,7 @@ receivers:
             - source_labels: [ __meta_kubernetes_node_name ]
               regex: (.+)
               target_label: __metrics_path__
-              replacement: /api/v1/nodes/$$1/proxy/metrics/resource
+              replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
             - action: replace
               replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: cluster
