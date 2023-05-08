@@ -1,13 +1,5 @@
 # nats
 
-nsc generate config --mem-resolver --config-file ./sxx.conf
-
-nsc generate config --sys-account SYS --nats-resolver
-
-nsc edit operator --account-jwt-server-url nats://localhost:4223
-
-nsc push --all
-
 # NKEY usage
 
 Information about https://docs.nats.io/using-nats/nats-tools/nk
@@ -33,6 +25,36 @@ For now, you should manually create secret:
 ```bash
 kubectl create -n nats secret generic nats-sys-nkey --from-literal=sys.nkey=<NK SALT>
 ```
+
+## Leaf configuration
+
+You can hide pwd configuration via ARGOCD configuration values like this:
+```yaml
+nats:
+  nats:
+    leafnodes:
+      remotes:
+        - account: LEAF_A
+          urls:
+            - nats-leaf://{{LEAF_USER_A}}:{{PWD}}@{{IP_A_1}}:4224
+            - nats-leaf://{{LEAF_USER_A}}:{{PWD}}@{{IP_A_2}}:4224
+            - nats-leaf://{{LEAF_USER_A}}:{{PWD}}@{{IP_A_3}}:4224
+        - account: LEAF_B
+          urls:
+            - nats-leaf://{{LEAF_USER_B}}:{{PWD}}@{{IP_B_1}}:4224
+            - nats-leaf://{{LEAF_USER_B}}:{{PWD}}@{{IP_B_2}}:4224
+            - nats-leaf://{{LEAF_USER_B}}:{{PWD}}@{{IP_B_3}}:4224
+```
+
+
+## In development
+nsc generate config --mem-resolver --config-file ./sxx.conf
+
+nsc generate config --sys-account SYS --nats-resolver
+
+nsc edit operator --account-jwt-server-url nats://localhost:4223
+
+nsc push --all
 
 This solution doesn't worked because of service account creation which should be IRSA attachable
 
