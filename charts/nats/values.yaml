@@ -1,0 +1,170 @@
+# version invoke update secrets
+version: 1
+
+# map secrets to files
+secrets:
+  "jetstream_admin.nk": "/global/nats/nkey/jetstream_admin"
+
+surveyor:
+  podAnnotations:
+    "prometheus.io/port": "7777"
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+  config:
+    servers: "nats://nats:4222"
+    expectedServers: 3
+    nkey:
+      secret:
+        name: nats-sys-nkey
+        key: sys.nkey
+    jetstream:
+      enabled: true
+      accounts:
+        - name: ACC
+nack:
+  jetstream:
+    nats:
+      url: "nats://nats:4222"
+      nkey:
+        secret:
+          name: nats-sys-nkey
+          key: sys.nkey
+
+nats:
+  # for support nats://nats:4222 we need this
+  # otherwise it would generate service name
+  fullnameOverride: "nats"
+  ###############################
+  #                             #
+  #  NATS Server Configuration  #
+  #                             #
+  ###############################
+  nats:
+    # Toggle whether to enable external access.
+    # This binds a host port for clients, gateways and leafnodes.
+    externalAccess: true
+
+    # Toggle to disable client advertisements (connect_urls),
+    # in case of running behind a load balancer (which is not recommended)
+    # it might be required to disable advertisements.
+    advertise: false
+
+    # IMPORTANT FEATURED
+    # Inject configs from
+    config:
+#      # this config generate in template
+#      - name: accounts
+#        configMap:
+#          name: accounts
+#      # this password holder which should be linked with secrets
+#      - name: password
+#        csi:
+#          driver: secrets-store.csi.k8s.io
+#          readOnly: true
+#          volumeAttributes:
+#            secretProviderClass: nats-secrets
+
+    jetstream:
+      enabled: true
+
+      # Jetstream Domain
+      domain: "TODO"
+
+      #############################
+      #                           #
+      #  Jetstream Memory Storage #
+      #                           #
+      #############################
+      memStorage:
+        enabled: true
+        size: 1Gi
+
+      ############################
+      #                          #
+      #  Jetstream File Storage  #
+      #                          #
+      ############################
+      fileStorage:
+        enabled: true
+        storageDirectory: /data
+
+        # Set for use with existing PVC
+        # existingClaim: jetstream-pvc
+        # claimStorageSize: 1Gi
+
+        # Use below block to create new persistent volume
+        # only used if existingClaim is not specified
+        size: 10Gi
+        storageClassName: "nats-ebs-sc-gp3" # Required to be installed this
+        accessModes:
+          - ReadWriteOnce
+
+  cluster:
+    name: "TODO"
+    enabled: true
+    replicas: 3
+    noAdvertise: true
+
+  # Leafnode connections to extend a cluster:
+  #
+  # https://docs.nats.io/nats-server/configuration/leafnodes
+  #
+  leafnodes:
+    enabled: true
+    noAdvertise: true
+  #    remotes:
+  #      - account: PRODUCT_COM
+  #        urls:
+  #          - "nats-leaf://leaf_bi_product_com:${COM_ACC_PWD}@10.10.9.225:4224"
+  #          - "nats-leaf://leaf_bi_product_com:${COM_ACC_PWD}@10.10.9.226:4224"
+  #          - "nats-leaf://leaf_bi_product_com:${COM_ACC_PWD}@10.10.9.227:4224"
+  #      - account: PRODUCT_KZ
+  #        urls:
+  #          - "nats-leaf://leaf_bi_product_kz:${KZ_ACC_PWD}@10.0.187.68:4224"
+  #          - "nats-leaf://leaf_bi_product_kz:${KZ_ACC_PWD}@10.0.187.69:4224"
+  #          - "nats-leaf://leaf_bi_product_kz:${KZ_ACC_PWD}@10.0.187.70:4224"
+
+  # Authentication setup
+  auth:
+    enabled: true
+    systemAccount: SYS
+    basic:
+      accounts:
+        SYS:
+          users:
+            # sys_admin
+            - nkey: UAN2OADXD7EQ4FSFQKOLOR3M3NNFMNN6DM5CKF7TV7VK624C5M6ABE6K
+        ACC:
+          users:
+            # jetstream_admin
+            - nkey: UCOV6R27OS3R25MZ6NRDXMOX3OSMJBTFZUPQUZPQQL7KLEL5EYFCKZKG
+              permissions:
+                publish: [ "$JS.API.STREAM.CREATE.*", "$JS.API.STREAM.UPDATE.*", "$JS.API.STREAM.DELETE.*",
+                           "$JS.API.STREAM.INFO.*", "$JS.API.STREAM.LIST", "$JS.API.STREAM.NAMES", "$JS.API.CONSUMER.DURABLE.CREATE.*.*",
+                           "$JS.API.CONSUMER.DELETE.*.*", "$JS.API.CONSUMER.INFO.*.*","$JS.API.CONSUMER.LIST.*","$JS.API.CONSUMER.NAMES.*",
+                           "$JS.API.STREAM.TEMPLATE.>" ]
+                subscribe: "_INBOX.>"
+            # admin
+            - nkey: UAKNMB7QK7775ODFC672FPW7NJEKZMVGTD7FIRN2DOIMIMMO7DFEJU7Z
+            # client
+            - nkey: UBDXF2HXZKNTPKRK3727HH367K7FWW5Q3D4NBA3NUPOJ546SWV37HS4W
+              permissions:
+                publish:
+                  deny: [ "$JS.API.STREAM.CREATE.*", "$JS.API.STREAM.UPDATE.*", "$JS.API.STREAM.DELETE.*",
+                          "$JS.API.CONSUMER.DURABLE.CREATE.*.*", "$JS.API.CONSUMER.DELETE.*.*", "$JS.API.STREAM.TEMPLATE.>", "$JS.API.CONSUMER.CREATE.>" ]
+
+          jetstream: enabled
+  exporter:
+    enabled:
+    args:
+      - -channelz
+      - -serverz
+      - -connz
+      - -routez
+      - -subz
+      - -varz
+      - -prefix=nats
+      - -use_internal_server_id
+      - -jsz=all
+      - -leafz
+      - http://localhost:8222/

@@ -1,0 +1,14 @@
+{{-  if .Values.secrets }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nats-ebs-sc-gp3
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "256"
+{{- end }}

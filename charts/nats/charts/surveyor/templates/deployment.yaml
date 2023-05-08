@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "surveyor.fullname" . }}
+  labels:
+    {{- include "surveyor.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "surveyor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "surveyor.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "surveyor.serviceAccountName" . }}
+      {{- if hasKey .Values "automountServiceAccountToken" }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "surveyor.image" .Values.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -p
+            - "7777"
+           {{- with .Values.config }}
+           {{- with .nkey}}
+            - --nkey=/etc/jsc-nkey/{{ .secret.key }}
+           {{- end }}
+           {{- with .credentials }}
+            - --creds=/creds/{{ .secret.key }}
+           {{- end }}
+
+           {{- with .servers }}
+            - -s={{ . }}
+           {{- end }}
+
+           {{- with .accounts }}
+            - --accounts
+           {{- end }}
+
+           {{- with .timeout }}
+            - --timeout={{ . }}
+           {{- end }}
+
+           {{- with .expectedServers }}
+            - -c={{ . }}
+           {{- end }}
+
+           {{- with .tls }}
+           {{- if .ca }}
+            - --tlscacert=/etc/nats-certs/clients/{{ .ca }}
+           {{- end }}
+            - --tlskey=/etc/nats-certs/clients/{{ .key }}
+            - --tlscert=/etc/nats-certs/clients/{{ .cert }}
+           {{- end }}
+           {{- end }}
+
+           {{- if .Values.config.jetstream.enabled }}
+            - --jetstream=/jetstream
+           {{- end }}
+          ports:
+            - name: http
+              containerPort: 7777
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          volumeMounts:
+            {{- if .Values.config.nkey }}
+            - name: jsc-sys-nkey
+              mountPath: /etc/jsc-nkey
+            {{- end }}
+            {{- with .Values.config.credentials }}
+            - name: creds
+              mountPath: /creds/
+              readOnly: true
+            {{- end }}
+            {{- with .Values.config.tls }}
+            - name: {{ .secret.name }}-volume
+              mountPath: /etc/nats-certs/clients/
+              readOnly: true
+            {{- end }}
+
+            {{- if .Values.config.jetstream.enabled }}
+            {{- with .Values.config.jetstream.accounts }}
+
+            {{- range . }}
+            # Mount every account tls certificate
+            {{- if .tls }}
+            - name: {{ .tls.secret.name }}-volume
+              mountPath: /etc/nats-certs/accounts/{{ .name }}
+            {{- end }}
+            {{- end }}
+
+            # Mount accounts configmap
+            - name: accounts-config-map
+              mountPath: /jetstream
+            {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- with .Values.config.nkey }}
+        - name: jsc-sys-nkey
+          secret:
+            secretName: {{ .secret.name }}
+        {{- end}}
+        {{- with .Values.config.credentials }}
+        - name: creds
+          secret:
+            secretName: {{ .secret.name }}
+        {{- end }}
+        {{- with .Values.config.tls }}
+        - name: {{ .secret.name }}-volume
+          secret:
+            secretName: {{ .secret.name }}
+        {{- end }}
+
+        {{- if .Values.config.jetstream.enabled }}
+        {{- with .Values.config.jetstream.accounts }}
+
+        {{- range . }}
+        # Mount every account tls certificate
+        {{- with .tls }}
+        - name: {{ .secret.name }}-volume
+          secret:
+            secretName: {{ .secret.name }}
+        {{- end }}
+        {{- end }}
+
+        # Mount accounts configmap
+        - name: accounts-config-map
+          configMap:
+            name: {{ include "surveyor.fullname" $ }}-accounts
+        {{- end }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

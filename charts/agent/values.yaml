@@ -326,8 +326,6 @@ config:
         grpc:
           max_recv_msg_size_mib: 32
           max_concurrent_streams: 16
-    fluentforward:
-      endpoint: 0.0.0.0:24224
     filelog:
       include:
         - /var/log/pods/*/*/*.log
@@ -442,7 +440,7 @@ config:
         processors: [ resource, transform, memory_limiter, batch/metrics ]
         exporters: [ logging, otlp/global ]
       logs:
-        receivers: [ fluentforward, otlp, filelog ]
+        receivers: [  otlp, filelog ]
         processors: [ k8sattributes, resource, attributes/loki, resource/loki, transform, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
   extensions:
