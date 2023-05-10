@@ -28,7 +28,7 @@ nack:
       nkey:
         secret:
           name: nats-sys-nkey
-          key: sys.nkey
+          key: js.admin.nkey
 
 nats:
   # for support nats://nats:4222 we need this
