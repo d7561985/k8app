@@ -29,7 +29,8 @@ spec:
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}
-            port: {{ default 80 $value.servicePort }}
+            port:
+              number: {{ default 80 $value.servicePort }}
 
 {{- end }}
 {{- end }}
@@ -43,7 +44,8 @@ spec:
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}
-            port: {{ default 80 $value.servicePort }}
+            port:
+              number: {{ default 80 $value.servicePort }}
 
     {{- end }}
   {{- end }}
