@@ -26,10 +26,12 @@ spec:
       paths:
 {{- range $key, $value := .Values.ingress.locations }}
       - path: {{ $key }}
+        pathType: {{ default "Prefix" $value.pathType }}
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}
-            port: {{ default 80 $value.servicePort }}
+            port:
+             number: {{ default 80 $value.servicePort }}
 
 {{- end }}
 {{- end }}
@@ -40,10 +42,12 @@ spec:
       paths:
     {{- range $key, $value := $value.locations }}
       - path: {{ $key }}
+        pathType: {{ default "Prefix" $value.pathType }}
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}
-            port: {{ default 80 $value.servicePort }}
+            port:
+             number: {{ default 80 $value.servicePort }}
 
     {{- end }}
   {{- end }}

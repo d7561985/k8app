@@ -76,17 +76,21 @@ ingress:
     # "some-host.com":
     #   locations:
     #     "/main":
+    #       pathType: Exact
     #       serviceName: "test-sv"
     #       servicePort: 8888
     #     "/page":
+    #       pathType: Exact
     #       serviceName: "test-sv"
     #       servicePort: 8881
     # "test.some-host.com":
     #   locations:
     #     "/secondary":
+    #       pathType: Prefix
     #       serviceName: "test-sv"
     #       servicePort: 8880
     #     "/path":
+    #       pathType: Prefix
     #       serviceName: "test-sv"
     #       servicePort: 8889
 
