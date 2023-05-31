@@ -14,8 +14,8 @@ secrets:
 worker:
   enabled: true
   replicas: 2
-  command: ["printenv"]
-  args: ["HOSTNAME","PATH"]
+  command: [ "printenv" ]
+  args: [ "HOSTNAME","PATH" ]
 
 job:
   enabled: true
@@ -23,8 +23,10 @@ job:
     migrate-db:
       backoffLimit: 1
       command:
-      - /app/db
-      - migrate
+        - /app/db
+        - migrate
+
+
 
 volume:
   enabled: true
@@ -54,3 +56,15 @@ tolerations:
     operator: "Equal"
     value: "value1"
     effect: "NoSchedule"
+
+ingress:
+  enabled: true
+  extraHosts:
+    "some-host.com":
+      locations:
+        "/main":
+          serviceName: "test-sv"
+          servicePort: 8888
+        "/page":
+          serviceName: "test-sv"
+          servicePort: 8881

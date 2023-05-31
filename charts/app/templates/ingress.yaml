@@ -27,6 +27,7 @@ spec:
       paths:
 {{- range $key, $value := .Values.ingress.locations }}
       - path: {{ $key }}
+        pathType: {{ default "Prefix" $value.pathType }}
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}
@@ -42,6 +43,7 @@ spec:
       paths:
     {{- range $key, $value := $value.locations }}
       - path: {{ $key }}
+        pathType: {{ default "Prefix" $value.pathType }}
         backend:
           service:
             name: {{ default $serviceDefaultName $value.serviceName }}

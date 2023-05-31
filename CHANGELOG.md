@@ -2,6 +2,9 @@
 
 ## app
 
+### 3.1.12
+* update obsolete version of Ingres kind up to networking.k8s.io/v1 (added pathType + fixed port notion)
+
 ### 3.1.10
 * volume ReadOnly option required for EFS
 * refactor value mountPath
