@@ -67,6 +67,16 @@ resources: {}
   # requests:
   #   memory: 400Mi
 
+services:
+  enabled: false
+  spec: {}
+    #  test-api-sv:
+    #    name: test-api
+    #    http:
+    #      protocol: TCP
+    #      externalPort: 80
+    #      internalPort: 8000
+
 ingress:
   enabled: false
   fqdn: ""
@@ -89,6 +99,8 @@ ingress:
     #     "/path":
     #       serviceName: "test-sv"
     #       servicePort: 8889
+
+
 
 job:
 #If true, create simple jobs, e.g. migration

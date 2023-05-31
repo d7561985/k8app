@@ -19,6 +19,7 @@ metadata:
 {{- end }}
 {{- end }}
 spec:
+  ingressClassName: nginx
   rules:
 {{- if .Values.ingress.fqdn }}
   - host: {{ .Values.ingress.fqdn }}
