@@ -326,6 +326,9 @@ receivers:
               source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: component
             - action: replace
+              source_labels: [__meta_kubernetes_pod_container_name]
+              target_label: container
+            - action: replace
               regex: ^(.+)$
               replacement: "{{ .Values.info.namespace }}/$$1"
               source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
