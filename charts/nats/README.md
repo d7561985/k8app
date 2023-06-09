@@ -33,7 +33,7 @@ nk -gen user -pubout
 
 ### 2. Secret
 ```bash
-kubectl create -n nats secret generic nats-sys-nkey --from-literal=sys.nkey=<SYS_SNKEY_VALUE> --from-literal=js.admin.nkey=<JS_ADMIN_SNKEY_VALUE>
+kubectl create -n nats secret generic nats-sys-nkey --from-literal=sys.nkey=<SYS_SNKEY_VALUE> --from-literal=js.admin.cnkey=<JS_ADMIN_SNKEY_VALUE>
 ```
 
 ### 3. GitOps repo

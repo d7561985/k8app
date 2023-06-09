@@ -97,6 +97,7 @@ receivers:
   prometheus:
     default:
       enabled: true
+      # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
       scrape_configs:
           # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
 #          - job_name: "{{ .Values.info.name }}"
