@@ -1,5 +1,5 @@
 environment: ""
-appName: ""
+appName: app
 branch: ""
 version: ""
 nodeSelector: {}
@@ -14,7 +14,7 @@ args: []
 
 replicas: 1
 buildId:
-serviceAccountName: "app" # infra should always create this service account
+serviceAccountName: "app"  # infra should always create this service account
 deployment:
   enabled: true
 
@@ -95,7 +95,7 @@ ingress:
     #       servicePort: 8889
 
 job:
-#If true, create simple jobs, e.g. migration
+# If true, create simple jobs, e.g. migration
   enabled: false
   spec: {}
   # printenv:
@@ -110,7 +110,7 @@ cloudflare:
   enabled: false
 
 cronjob:
-#If true, create cron jobs
+# If true, create cron jobs
   enabled: false
   spec: {}
   # printenv:
@@ -123,7 +123,7 @@ cronjob:
   #   schedule: "*/2 * * * *"
 
 worker:
-  #If true, create worker deployments
+  # If true, create worker deployments
   enabled: false
 #  spec:
 #   printenv:
