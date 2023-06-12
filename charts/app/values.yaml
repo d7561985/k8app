@@ -14,7 +14,7 @@ args: []
 
 replicas: 1
 buildId:
-serviceAccountName: "app"  # infra should always create this service account
+serviceAccountName: ~  # infra should always create service account "app"
 deployment:
   enabled: true
 
@@ -44,8 +44,8 @@ serviceExternalName:
   externalName: ""
 
 image:
-  repository: ""
-  tag: ""
+  repository: nginx
+  tag: latest
 
 lifecycle:
 #  preStop:
