@@ -69,6 +69,7 @@ resources: {}
 
 ingress:
   enabled: false
+  className: ""
   fqdn: ""
   aliases: ""
   vaultCert: ""

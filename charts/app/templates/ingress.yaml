@@ -19,6 +19,9 @@ metadata:
 {{- end }}
 {{- end }}
 spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ default "nginx" .Values.ingress.className }}
+  {{- end }}
   rules:
 {{- if .Values.ingress.fqdn }}
   - host: {{ .Values.ingress.fqdn }}
