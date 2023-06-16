@@ -25,7 +25,7 @@ spec:
   {{- end -}}
   {{- if .Values.serviceExternal.loadBalancerSourceRanges}}
   loadBalancerSourceRanges:
-  {{- range .Values.service.loadBalancerSourceRanges }}
+  {{- range .Values.serviceExternal.loadBalancerSourceRanges }}
   - {{ . }}
   {{- end }}
   {{- end }}

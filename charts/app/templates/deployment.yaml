@@ -82,7 +82,7 @@ spec:
     {{- if .Values.initContainers -}}
       initContainers:
         - name: {{ $appname }}-init
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command:
 {{ .Values.initContainers.command  | toYaml | indent 12}}
           args:
@@ -163,7 +163,7 @@ spec:
             readOnly: true
             mountPath: "/mnt/secrets-store"
           {{- end }}
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: Always
         {{- with .Values.resources }}
         resources:
