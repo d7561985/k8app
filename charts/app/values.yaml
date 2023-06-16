@@ -14,7 +14,7 @@ args: []
 
 replicas: 1
 buildId:
-serviceAccountName: ~  # infra should always create service account "app"
+serviceAccountName: app  # infra should always create service account "app"
 deployment:
   enabled: true
 
