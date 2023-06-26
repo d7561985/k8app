@@ -100,10 +100,10 @@ receivers:
       # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
       scrape_configs:
           # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
-#          - job_name: "{{ .Values.info.name }}"
-#            scrape_interval: 15s
-#            static_configs:
-#              - targets: [ '0.0.0.0:8888' ]
+          - job_name: "{{ .Values.info.name }}"
+            scrape_interval: 15s
+            static_configs:
+              - targets: [ '0.0.0.0:8888' ]
     append:
       enabled: false
       scrape_configs:
@@ -451,7 +451,7 @@ config:
         processors: [ resource, transform, memory_limiter, batch/metrics ]
         exporters: [ logging, otlp/global ]
       metrics:
-        receivers: [ otlp,  ]
+        receivers: [ otlp ]
         processors: [ resource, transform, memory_limiter, batch/metrics ]
         exporters: [ logging, otlp/global ]
       logs:
