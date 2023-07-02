@@ -47,7 +47,6 @@ Selector labels
 */}}
 {{- define "agent.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "agent.name" . }}
-app.kubernetes.io/component: {{ include "agent.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
