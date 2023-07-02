@@ -49,8 +49,7 @@ serviceAccount:
   # Annotations to add to the service account
   annotations: { }
 
-podAnnotations:
-  "app.kubernetes.io/component": "agent"
+podAnnotations: { }
 
 podSecurityContext: { }
 # fsGroup: 2000
