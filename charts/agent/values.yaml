@@ -4,7 +4,7 @@
 info:
   name: agent
   license: PLZ_CHANGE
-  namespace: PLZ_CHANGE
+  project: PLZ_CHANGE
   deployment_environment: PLZ_CHANGE
 
 IsDaemonSet: false
@@ -126,7 +126,7 @@ receivers:
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
             - action: replace
-              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: cluster
     kubernetes:
       enabled: true
@@ -169,7 +169,7 @@ receivers:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
             - action: replace
-              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: origin_prometheus
           metric_relabel_configs: [ ]
         # required helm name: kube-state-metrics
@@ -199,7 +199,7 @@ receivers:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
             - action: replace
-              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: cluster
         # coredns
         # https://grafana.com/grafana/dashboards/14981-coredns/
@@ -292,7 +292,7 @@ receivers:
               source_labels:
                 - __meta_kubernetes_pod_phase
             - action: replace
-              replacement: "{{ .Values.info.namespace }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: cluster
             - action: replace
               source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
@@ -524,8 +524,8 @@ config:
           value: resource, service, namespace, license, deployment_environment, department, namespace, container, aws_region
     resource:
       attributes:
-        - key: department
-          value: "{{ .Values.info.namespace }}"
+        - key: project
+          value: "{{ .Values.info.project }}"
           action: upsert
         - key: license
           action: upsert
