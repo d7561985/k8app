@@ -103,7 +103,7 @@ receivers:
           - job_name: "{{ .Values.info.name }}"
             scrape_interval: 15s
             static_configs:
-              - targets: [ '0.0.0.0:8888' ]
+              - targets: [ '127.0.0.1:8888' ]
     append:
       enabled: false
       scrape_configs:
@@ -390,7 +390,8 @@ config:
       resource_to_telemetry_conversion:
         enabled: true
     logging:
-      verbosity: 0
+      # detailed|normal|basic
+      verbosity: basic
       sampling_initial: 10
       sampling_thereafter: 50
     otlp/global:
@@ -416,13 +417,13 @@ config:
         receivers: [ otlp ]
         processors: [ resource, resource/tempo, memory_limiter, batch ]
         exporters: [ logging, otlp/global ]
-      metrics/2:
-        receivers: [ prometheus ]
-        processors: [ resource, transform, memory_limiter, batch/metrics ]
-        exporters: [ logging, otlp/global ]
       metrics:
         receivers: [ otlp ]
-        processors: [ resource, transform, memory_limiter, batch/metrics ]
+        processors: [ transform, resource, transform/metrics, memory_limiter, batch/metrics ]
+        exporters: [ logging, otlp/global ]
+      metrics/2:
+        receivers: [ prometheus ]
+        processors: [ transform, resource, transform/metrics, memory_limiter, batch/metrics ]
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
@@ -435,6 +436,12 @@ config:
     zpages:
       endpoint: :55679
   processors:
+    transform/metrics:
+      metric_statements:
+        - context: resource
+          statements:
+            # fix duplication: replace 127.0.0.1:8888 => host.name value
+            - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["service.name"] == "{{ .Values.info.name }}"
     # k8sattributes processor to get the metadata from K8s
     k8sattributes:
       auth_type: "serviceAccount"
@@ -468,10 +475,9 @@ config:
         - context: resource
           statements:
             - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset).name", "resource")
-            - replace_all_patterns(attributes, "key", "service.name", "job")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
-            - replace_all_patterns(attributes, "key", "k8s.node.name", "node")
+            - replace_all_patterns(attributes, "key", "k8s.node.name", "host.name")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "k8s_namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - replace_all_patterns(attributes, "key", "k8s.container.name", "k8s_container")
@@ -512,9 +518,6 @@ config:
           value: resource, service, namespace, license, deployment_environment, k8s_namespace, k8s_container, aws_region
     resource:
       attributes:
-        - action: upsert
-          key: host.name
-          from_attribute: "k8s.node.name"
         - key: namespace
           value: "{{ .Values.info.namespace }}"
           action: upsert
@@ -524,13 +527,16 @@ config:
         - key: deployment_environment
           value: "{{ .Values.info.deployment_environment }}"
           action: upsert
-        - key: http.scheme
-          action: delete
-        - key: net.host.port
-          action: delete
         - key: host
           from_attribute: "host.name"
           action: upsert
+        ### to the end after namespace declaration
+        - action: upsert
+          from_attribute: service
+          key: service.name # required for proper job name of target_info
+        - action: upsert
+          from_attribute: namespace
+          key: service.namespace
     batch:
       send_batch_size: 100
       send_batch_max_size: 1000
@@ -538,7 +544,7 @@ config:
     batch/metrics:
       send_batch_size: 100
       send_batch_max_size: 1000
-      timeout: 5s
+      timeout: 15s
     # Enabling the memory_limiter is strongly recommended for every pipeline.
     # Configuration is based on the amount of memory allocated to the collector.
     # The configuration below assumes 2GB of memory. In general, the ballast
