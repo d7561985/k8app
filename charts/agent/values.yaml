@@ -49,7 +49,8 @@ serviceAccount:
   # Annotations to add to the service account
   annotations: { }
 
-podAnnotations: { }
+podAnnotations:
+  "app.kubernetes.io/component": "agent"
 
 podSecurityContext: { }
 # fsGroup: 2000
@@ -300,6 +301,13 @@ receivers:
             - action: replace
               source_labels: [__meta_kubernetes_pod_container_name]
               target_label: container
+            # rename job as ns/name
+            - action: replace
+              regex: ^(.+)$
+              replacement: "{{ .Values.info.namespace }}/$$1"
+              source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+              target_label: job
+            # but more importantly to follow grafana notion: <ns>/<component_name>
             - action: replace
               regex: ^(.+)$
               replacement: "{{ .Values.info.namespace }}/$$1"
