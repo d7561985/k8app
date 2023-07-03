@@ -308,8 +308,8 @@ receivers:
               target_label: job
             # but more importantly to follow grafana notion: <ns>/<component_name>
             - action: replace
-              replacement: "$$1"
-              source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+              separator: "/"
+              source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
 config:
   receivers:
