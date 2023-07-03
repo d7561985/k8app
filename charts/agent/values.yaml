@@ -260,6 +260,7 @@ receivers:
                   # only scrape data from pods running on the same node as collector
                   field: "spec.nodeName=$NODE_NAME"
           honor_labels: false
+          scrape_interval: 15s
           relabel_configs:
             - action: keep
               regex: true
