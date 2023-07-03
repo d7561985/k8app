@@ -483,10 +483,10 @@ config:
             - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset).name", "resource")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
-            - replace_all_patterns(attributes, "key", "k8s.node.name", "host.name")
+            - delete_key(attributes, "k8s.container.name")
+            - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
-            - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
       log_statements:
         - context: resource
           statements:
@@ -543,6 +543,11 @@ config:
         - action: upsert
           from_attribute: namespace
           key: service.namespace
+        - key: http.scheme
+          action: delete
+        - key: net.host.port
+          action: delete
+
     batch:
       send_batch_size: 100
       send_batch_max_size: 1000
