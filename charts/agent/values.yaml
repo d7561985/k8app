@@ -481,7 +481,7 @@ config:
       metric_statements:
         - context: resource
           statements:
-            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset).name", "resource")
+            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "resource")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
             - delete_key(attributes, "k8s.container.name")
