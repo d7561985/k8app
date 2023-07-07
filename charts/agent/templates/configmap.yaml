@@ -10,14 +10,14 @@ data:
       prometheus:
         config:
           scrape_configs:
-{{- if and .Values.receivers.prometheus.default.enabled ( not (empty .Values.receivers.prometheus.default.scrape_configs)) }}
-{{- tpl (toYaml .Values.receivers.prometheus.default.scrape_configs) . | nindent 12 }}
+{{- if and .Values.prometheus.default.enabled ( not (empty .Values.prometheus.default.scrape_configs)) }}
+{{- tpl (toYaml .Values.prometheus.default.scrape_configs) . | nindent 12 }}
 {{- end}}
-{{- if .Values.receivers.prometheus.kubernetes.enabled}}
-{{- tpl (toYaml .Values.receivers.prometheus.kubernetes.scrape_configs) . | nindent 12 }}
+{{- if .Values.prometheus.kubernetes.enabled}}
+{{- tpl (toYaml .Values.prometheus.kubernetes.scrape_configs) . | nindent 12 }}
 {{- end}}
-{{- if .Values.receivers.prometheus.append.enabled}}
-{{- tpl (toYaml .Values.receivers.prometheus.append.scrape_configs) . | nindent 12 }}
+{{- if .Values.prometheus.append.enabled}}
+{{- tpl (toYaml .Values.prometheus.append.scrape_configs) . | nindent 12 }}
 {{- end}}
 {{- tpl (toYaml .Values.config.receivers) . | nindent 6 }}
 

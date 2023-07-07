@@ -93,8 +93,268 @@ certs:
   "client.crt": "client.crt"
   "client.key": "client.key"
 
-receivers:
-  prometheus:
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        http: {}
+        grpc:
+          max_recv_msg_size_mib: 32
+          max_concurrent_streams: 16
+    filelog:
+      include:
+        - /var/log/pods/*/*/*.log
+      exclude:
+        # Exclude logs from all containers named otel-collector
+        - /var/log/pods/*/otel-collector/*.log
+      start_at: end
+      include_file_path: true
+      include_file_name: false
+      operators:
+        # Find out which format is used by kubernetes
+        - type: router
+          id: get-format
+          routes:
+            - output: parser-docker
+              expr: 'body matches "^\\{"'
+            - output: parser-crio
+              expr: 'body matches "^[^ Z]+ "'
+            - output: parser-containerd
+              expr: 'body matches "^[^ Z]+Z"'
+        # Parse CRI-O format
+        - type: regex_parser
+          id: parser-crio
+          regex: '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout_type: gotime
+            layout: '2006-01-02T15:04:05.000000000-07:00'
+        # Parse CRI-Containerd format
+        - type: regex_parser
+          id: parser-containerd
+          regex: '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        # Parse Docker format
+        - type: json_parser
+          id: parser-docker
+          output: extract_metadata_from_filepath
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        - type: move
+          from: attributes.log
+          to: body
+        # Extract metadata from file path
+        - type: regex_parser
+          id: extract_metadata_from_filepath
+          regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
+          parse_from: attributes["log.file.path"]
+        # Rename attributes
+        - type: move
+          from: attributes.stream
+          to: attributes["log.iostream"]
+        - type: move
+          from: attributes.container_name
+          to: resource["k8s.container.name"]
+        - type: move
+          from: attributes.namespace
+          to: resource["k8s.namespace.name"]
+        - type: move
+          from: attributes.pod_name
+          to: resource["k8s.pod.name"]
+        - type: move
+          from: attributes.restart_count
+          to: resource["k8s.container.restart_count"]
+        - type: move
+          from: attributes.uid
+          to: resource["k8s.pod.uid"]
+  exporters:
+    prometheus:
+      endpoint: "0.0.0.0:9000"
+      send_timestamps: true
+      metric_expiration: 60m
+      resource_to_telemetry_conversion:
+        enabled: true
+    logging:
+      # detailed|normal|basic
+      verbosity: basic
+      sampling_initial: 10
+      sampling_thereafter: 50
+    otlp/global:
+      endpoint: "{{ .Values.gateway.addr }}"
+      compression: snappy
+      tls:
+        ca_file: /certs/ca.crt
+        cert_file: /certs/client.crt
+        key_file: /certs/client.key
+      sending_queue:
+        enabled: true
+        num_consumers: 20
+        queue_size: 1000
+      retry_on_failure:
+        enabled: false
+        initial_interval: 1s
+        max_interval: 10s
+        max_elapsed_time: 20s
+  processors:
+    transform/metrics:
+      metric_statements:
+        - context: resource
+          statements:
+            # fix duplication: replace 127.0.0.1:8888 => host.name value
+            - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["service.name"] == "{{ .Values.info.name }}"
+    # k8sattributes processor to get the metadata from K8s
+    k8sattributes:
+      auth_type: "serviceAccount"
+      passthrough: false
+      extract:
+        metadata:
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.deployment.name
+          - k8s.namespace.name
+          - k8s.node.name
+          - k8s.pod.start_time
+      # Pod association using resource attributes and connection
+      pod_association:
+        - sources:
+            - from: resource_attribute
+              name: ip
+        - sources:
+            - from: resource_attribute
+              name: k8s.pod.ip
+        - sources:
+            - from: resource_attribute
+              name: host.name
+        - sources:
+            - from: connection
+              name: ip
+    # loki not support keys with dots - so replace it
+    transform:
+      metric_statements:
+        - context: resource
+          statements:
+            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "resource")
+            - delete_key(attributes, "k8s.pod.uid")
+            - delete_key(attributes, "k8s.container.restart_count")
+            - delete_key(attributes, "k8s.container.name")
+            - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
+            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
+      log_statements:
+        - context: resource
+          statements:
+            - delete_key(attributes, "k8s.pod.uid")
+            - delete_key(attributes, "k8s.container.restart_count")
+            - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
+            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
+        - context: log
+          statements:
+            - delete_key(attributes, "logtag")
+            - delete_key(attributes, "log.file.path")
+    resource/tempo:
+      attributes:
+        - key: "service.name"
+          from_attribute: "service"
+          action: insert
+        - key: "service"
+          action: delete
+    attributes/loki:
+      actions:
+        - action: insert
+          key: loki.attribute.labels
+          value: level
+    resource/loki:
+      attributes:
+        - action: insert
+          key: loki.format
+          value: logfmt
+        - action: insert
+          key: loki.resource.labels
+          value: project, license, deployment_environment, service, namespace, container, aws_region
+    resource:
+      attributes:
+        - key: project
+          value: "{{ .Values.info.project }}"
+          action: upsert
+        - key: license
+          action: upsert
+          value: "{{ .Values.info.license }}"
+        - key: deployment_environment
+          value: "{{ .Values.info.deployment_environment }}"
+          action: upsert
+        - key: host
+          from_attribute: "host.name"
+          action: upsert
+        ### to the end after namespace declaration
+        - action: upsert
+          from_attribute: service
+          key: service.name # required for proper job name of target_info
+        - action: upsert
+          from_attribute: project
+          key: service.namespace
+        - key: http.scheme
+          action: delete
+        - key: net.host.port
+          action: delete
+
+    batch:
+      send_batch_size: 500
+      send_batch_max_size: 1000
+      timeout: 15s
+    batch/metrics:
+      send_batch_size: 10000
+      send_batch_max_size: 20000
+      timeout: 15s
+    # Enabling the memory_limiter is strongly recommended for every pipeline.
+    # Configuration is based on the amount of memory allocated to the collector.
+    # The configuration below assumes 2GB of memory. In general, the ballast
+    # should be set to 1/3 of the collector's memory, the limit should be 90% of
+    # the collector's memory up to 2GB, and the spike should be 25% of the
+    # collector's memory up to 2GB. In addition, the "--mem-ballast-size-mib" CLI
+    # flag must be set to the same value as the "ballast_size_mib". For more
+    # information, see
+    # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
+    memory_limiter:
+      check_interval: 2s
+      limit_mib: 6000
+      spike_limit_mib: 1000
+  extensions:
+    health_check: {}
+    pprof:
+      endpoint: :1888
+    zpages:
+      endpoint: :55679
+  service:
+    extensions: [ pprof, zpages, health_check ]
+    telemetry:
+      logs:
+        level: INFO
+    pipelines:
+      traces:
+        receivers: [ otlp ]
+        processors: [ memory_limiter, resource, resource/tempo, batch ]
+        exporters: [ logging, otlp/global ]
+      metrics:
+        receivers: [ otlp ]
+        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
+        exporters: [ logging, otlp/global ]
+      metrics/2:
+        receivers: [ prometheus ]
+        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
+        exporters: [ logging, otlp/global ]
+      logs:
+        receivers: [  otlp, filelog ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
+        exporters: [ logging, otlp/global ]
+
+prometheus:
     default:
       enabled: true
       # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
@@ -296,260 +556,3 @@ receivers:
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
-
-config:
-  receivers:
-    otlp:
-      protocols:
-        http: {}
-        grpc:
-          max_recv_msg_size_mib: 32
-          max_concurrent_streams: 16
-    filelog:
-      include:
-        - /var/log/pods/*/*/*.log
-      exclude:
-        # Exclude logs from all containers named otel-collector
-        - /var/log/pods/*/otel-collector/*.log
-      start_at: end
-      include_file_path: true
-      include_file_name: false
-      operators:
-        # Find out which format is used by kubernetes
-        - type: router
-          id: get-format
-          routes:
-            - output: parser-docker
-              expr: 'body matches "^\\{"'
-            - output: parser-crio
-              expr: 'body matches "^[^ Z]+ "'
-            - output: parser-containerd
-              expr: 'body matches "^[^ Z]+Z"'
-        # Parse CRI-O format
-        - type: regex_parser
-          id: parser-crio
-          regex: '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
-          output: extract_metadata_from_filepath
-          timestamp:
-            parse_from: attributes.time
-            layout_type: gotime
-            layout: '2006-01-02T15:04:05.000000000-07:00'
-        # Parse CRI-Containerd format
-        - type: regex_parser
-          id: parser-containerd
-          regex: '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) ?(?P<log>.*)$'
-          output: extract_metadata_from_filepath
-          timestamp:
-            parse_from: attributes.time
-            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
-        # Parse Docker format
-        - type: json_parser
-          id: parser-docker
-          output: extract_metadata_from_filepath
-          timestamp:
-            parse_from: attributes.time
-            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
-        - type: move
-          from: attributes.log
-          to: body
-        # Extract metadata from file path
-        - type: regex_parser
-          id: extract_metadata_from_filepath
-          regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
-          parse_from: attributes["log.file.path"]
-        # Rename attributes
-        - type: move
-          from: attributes.stream
-          to: attributes["log.iostream"]
-        - type: move
-          from: attributes.container_name
-          to: resource["k8s.container.name"]
-        - type: move
-          from: attributes.namespace
-          to: resource["k8s.namespace.name"]
-        - type: move
-          from: attributes.pod_name
-          to: resource["k8s.pod.name"]
-        - type: move
-          from: attributes.restart_count
-          to: resource["k8s.container.restart_count"]
-        - type: move
-          from: attributes.uid
-          to: resource["k8s.pod.uid"]
-  exporters:
-    prometheus:
-      endpoint: "0.0.0.0:9000"
-      send_timestamps: true
-      metric_expiration: 60m
-      resource_to_telemetry_conversion:
-        enabled: true
-    logging:
-      # detailed|normal|basic
-      verbosity: basic
-      sampling_initial: 10
-      sampling_thereafter: 50
-    otlp/global:
-      endpoint: "{{ .Values.gateway.addr }}"
-      compression: snappy
-      tls:
-        ca_file: /certs/ca.crt
-        cert_file: /certs/client.crt
-        key_file: /certs/client.key
-      sending_queue:
-        enabled: true
-        num_consumers: 20
-        queue_size: 1000
-      retry_on_failure:
-        enabled: false
-        initial_interval: 1s
-        max_interval: 10s
-        max_elapsed_time: 20s
-  service:
-    extensions: [ pprof, zpages, health_check ]
-    pipelines:
-      traces:
-        receivers: [ otlp ]
-        processors: [ memory_limiter, resource, resource/tempo, batch ]
-        exporters: [ logging, otlp/global ]
-      metrics:
-        receivers: [ otlp ]
-        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
-        exporters: [ logging, otlp/global ]
-      metrics/2:
-        receivers: [ prometheus ]
-        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
-        exporters: [ logging, otlp/global ]
-      logs:
-        receivers: [  otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
-        exporters: [ logging, otlp/global ]
-  extensions:
-    health_check: {}
-    pprof:
-      endpoint: :1888
-    zpages:
-      endpoint: :55679
-  processors:
-    transform/metrics:
-      metric_statements:
-        - context: resource
-          statements:
-            # fix duplication: replace 127.0.0.1:8888 => host.name value
-            - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["service.name"] == "{{ .Values.info.name }}"
-    # k8sattributes processor to get the metadata from K8s
-    k8sattributes:
-      auth_type: "serviceAccount"
-      passthrough: false
-      extract:
-        metadata:
-          - k8s.pod.name
-          - k8s.pod.uid
-          - k8s.deployment.name
-          - k8s.namespace.name
-          - k8s.node.name
-          - k8s.pod.start_time
-      # Pod association using resource attributes and connection
-      pod_association:
-        - sources:
-            - from: resource_attribute
-              name: ip
-        - sources:
-            - from: resource_attribute
-              name: k8s.pod.ip
-        - sources:
-            - from: resource_attribute
-              name: host.name
-        - sources:
-            - from: connection
-              name: ip
-    # loki not support keys with dots - so replace it
-    transform:
-      metric_statements:
-        - context: resource
-          statements:
-            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "resource")
-            - delete_key(attributes, "k8s.pod.uid")
-            - delete_key(attributes, "k8s.container.restart_count")
-            - delete_key(attributes, "k8s.container.name")
-            - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
-            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
-            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
-      log_statements:
-        - context: resource
-          statements:
-            - delete_key(attributes, "k8s.pod.uid")
-            - delete_key(attributes, "k8s.container.restart_count")
-            - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
-            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
-            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
-        - context: log
-          statements:
-            - delete_key(attributes, "logtag")
-            - delete_key(attributes, "log.file.path")
-    resource/tempo:
-      attributes:
-        - key: "service.name"
-          from_attribute: "service"
-          action: insert
-        - key: "service"
-          action: delete
-    attributes/loki:
-      actions:
-        - action: insert
-          key: loki.attribute.labels
-          value: level
-    resource/loki:
-      attributes:
-        - action: insert
-          key: loki.format
-          value: logfmt
-        - action: insert
-          key: loki.resource.labels
-          value: project, license, deployment_environment, service, namespace, container, aws_region
-    resource:
-      attributes:
-        - key: project
-          value: "{{ .Values.info.project }}"
-          action: upsert
-        - key: license
-          action: upsert
-          value: "{{ .Values.info.license }}"
-        - key: deployment_environment
-          value: "{{ .Values.info.deployment_environment }}"
-          action: upsert
-        - key: host
-          from_attribute: "host.name"
-          action: upsert
-        ### to the end after namespace declaration
-        - action: upsert
-          from_attribute: service
-          key: service.name # required for proper job name of target_info
-        - action: upsert
-          from_attribute: project
-          key: service.namespace
-        - key: http.scheme
-          action: delete
-        - key: net.host.port
-          action: delete
-
-    batch:
-      send_batch_size: 500
-      send_batch_max_size: 1000
-      timeout: 15s
-    batch/metrics:
-      send_batch_size: 10000
-      send_batch_max_size: 20000
-      timeout: 15s
-    # Enabling the memory_limiter is strongly recommended for every pipeline.
-    # Configuration is based on the amount of memory allocated to the collector.
-    # The configuration below assumes 2GB of memory. In general, the ballast
-    # should be set to 1/3 of the collector's memory, the limit should be 90% of
-    # the collector's memory up to 2GB, and the spike should be 25% of the
-    # collector's memory up to 2GB. In addition, the "--mem-ballast-size-mib" CLI
-    # flag must be set to the same value as the "ballast_size_mib". For more
-    # information, see
-    # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
-    memory_limiter:
-      check_interval: 2s
-      limit_mib: 6000
-      spike_limit_mib: 1000
