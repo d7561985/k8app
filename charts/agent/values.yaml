@@ -291,9 +291,6 @@ config:
         - key: deployment_environment
           value: "{{ .Values.info.deployment_environment }}"
           action: upsert
-        - key: host
-          from_attribute: "host.name"
-          action: upsert
         ### to the end after namespace declaration
         - action: upsert
           from_attribute: service
