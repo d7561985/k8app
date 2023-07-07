@@ -34,7 +34,7 @@ image:
   repository: otel/opentelemetry-collector-contrib
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.72.0"
+  tag: "0.81.0"
 
 imagePullSecrets: [ ]
 nameOverride: ""
@@ -141,7 +141,7 @@ receivers:
         - job_name: prometheus-node-exporter
           #scrape_interval: 15s
           honor_labels: false
-          kubernetes_sd_configs:
+          kubernetes_sd_configs: &sd-pod
             - role: pod
               selectors:
                 - role: pod
@@ -177,12 +177,7 @@ receivers:
         # dashboard ID: 13332
         - job_name: kube-state-metrics
           honor_labels: false
-          kubernetes_sd_configs:
-            - role: pod
-              selectors:
-                - role: pod
-                  # only scrape data from pods running on the same node as collector
-                  field: "spec.nodeName=$NODE_NAME"
+          kubernetes_sd_configs: *sd-pod
           relabel_configs:
             - action: keep
               source_labels:
@@ -208,12 +203,7 @@ receivers:
         # dashboard ID: 15762
         - job_name: coredns
           honor_labels: false
-          kubernetes_sd_configs:
-            - role: pod
-              selectors:
-                - role: pod
-                  # only scrape data from pods running on the same node as collector
-                  field: "spec.nodeName=$NODE_NAME"
+          kubernetes_sd_configs: *sd-pod
           relabel_configs:
             - action: keep
               source_labels: # k8s-app: kube-dns
@@ -253,12 +243,7 @@ receivers:
         # prometheus.io/scrape: "true"
         # prometheus.io/param: "xxx=yyy"
         - job_name: kubernetes-pods
-          kubernetes_sd_configs:
-            - role: pod
-              selectors:
-                - role: pod
-                  # only scrape data from pods running on the same node as collector
-                  field: "spec.nodeName=$NODE_NAME"
+          kubernetes_sd_configs: *sd-pod
           honor_labels: false
           scrape_interval: 15s
           relabel_configs:
@@ -311,6 +296,7 @@ receivers:
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
+
 config:
   receivers:
     otlp:
@@ -423,19 +409,19 @@ config:
     pipelines:
       traces:
         receivers: [ otlp ]
-        processors: [ resource, resource/tempo, memory_limiter, batch ]
+        processors: [ memory_limiter, resource, resource/tempo, batch ]
         exporters: [ logging, otlp/global ]
       metrics:
         receivers: [ otlp ]
-        processors: [ transform, resource, transform/metrics, memory_limiter, batch/metrics ]
+        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
         exporters: [ logging, otlp/global ]
       metrics/2:
         receivers: [ prometheus ]
-        processors: [ transform, resource, transform/metrics, memory_limiter, batch/metrics ]
+        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
-        processors: [ k8sattributes, resource, attributes/loki, resource/loki, transform, memory_limiter, batch ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
         exporters: [ logging, otlp/global ]
   extensions:
     health_check: {}
@@ -493,16 +479,13 @@ config:
           statements:
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
+            - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
             - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
-            - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
-#            - replace_all_patterns(attributes, "key", "\\.", "_")
         - context: log
           statements:
-            - set(resource.attributes["loki.format"], "logfmt") where severity_text != "" # backport compatibility tel < 2.2.0
             - delete_key(attributes, "logtag")
             - delete_key(attributes, "log.file.path")
-#            - replace_all_patterns(attributes, "key", "\\.", "_")
     resource/tempo:
       attributes:
         - key: "service.name"
@@ -517,12 +500,12 @@ config:
           value: level
     resource/loki:
       attributes:
-#        - action: insert
-#          key: loki.format
-#          value: logfmt
+        - action: insert
+          key: loki.format
+          value: logfmt
         - action: insert
           key: loki.resource.labels
-          value: resource, service, namespace, license, deployment_environment, department, namespace, container, aws_region
+          value: project, license, deployment_environment, service, namespace, container, aws_region
     resource:
       attributes:
         - key: project
@@ -542,7 +525,7 @@ config:
           from_attribute: service
           key: service.name # required for proper job name of target_info
         - action: upsert
-          from_attribute: namespace
+          from_attribute: project
           key: service.namespace
         - key: http.scheme
           action: delete
@@ -550,12 +533,12 @@ config:
           action: delete
 
     batch:
-      send_batch_size: 100
+      send_batch_size: 500
       send_batch_max_size: 1000
       timeout: 15s
     batch/metrics:
-      send_batch_size: 100
-      send_batch_max_size: 1000
+      send_batch_size: 10000
+      send_batch_max_size: 20000
       timeout: 15s
     # Enabling the memory_limiter is strongly recommended for every pipeline.
     # Configuration is based on the amount of memory allocated to the collector.
@@ -567,6 +550,6 @@ config:
     # information, see
     # https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/memorylimiterprocessor/README.md
     memory_limiter:
-      check_interval: 1s
-      limit_mib: 1000
-      spike_limit_mib: 300
+      check_interval: 2s
+      limit_mib: 6000
+      spike_limit_mib: 1000
