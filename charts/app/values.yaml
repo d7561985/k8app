@@ -222,3 +222,10 @@ volume:
 #      parameters:
 #        type: gp3
 #        iops: "3000"
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  cpu: 70
+  memory: 70
