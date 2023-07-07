@@ -146,15 +146,15 @@ config:
           timestamp:
             parse_from: attributes.time
             layout: '%Y-%m-%dT%H:%M:%S.%LZ'
-        - type: move
-          from: attributes.log
-          to: body
         # Extract metadata from file path
         - type: regex_parser
           id: extract_metadata_from_filepath
           regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
           parse_from: attributes["log.file.path"]
         # Rename attributes
+        - type: move
+          from: attributes.log
+          to: body
         - type: move
           from: attributes.stream
           to: attributes["log.iostream"]
@@ -270,6 +270,8 @@ config:
         - action: insert
           key: loki.attribute.labels
           value: level
+        - action: delete
+          key: time
     resource/loki:
       attributes:
         - action: insert
@@ -358,36 +360,10 @@ prometheus:
     default:
       enabled: true
       # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
-      scrape_configs:
-          # don't scrap self metrics
-          # use kubernetes-pods job instead
-          # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
-#          - job_name: "{{ .Values.info.name }}"
-#            scrape_interval: 15s
-#            static_configs:
-#              - targets: [ '127.0.0.1:8888' ]
+      scrape_configs: []
     append:
       enabled: false
-      scrape_configs:
-        - job_name: 'kubernetes-cadvisor'
-          scrape_interval: 1m
-          scheme: https
-          tls_config:
-            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-            insecure_skip_verify: true
-          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          kubernetes_sd_configs:
-            - role: node
-          relabel_configs:
-            - target_label: __address__
-              replacement: kubernetes.default.svc.cluster.local:443
-            - source_labels: [ __meta_kubernetes_node_name ]
-              regex: (.+)
-              target_label: __metrics_path__
-              replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
-            - action: replace
-              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-              target_label: cluster
+      scrape_configs: []
     kubernetes:
       enabled: true
       scrape_configs:
@@ -502,6 +478,9 @@ prometheus:
         # prometheus.io/port: "7777"
         # prometheus.io/scrape: "true"
         # prometheus.io/param: "xxx=yyy"
+        #
+        # use for self-monitoring
+        # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
         - job_name: kubernetes-pods
           kubernetes_sd_configs: *sd-pod
           honor_labels: false
@@ -556,3 +535,39 @@ prometheus:
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
+        #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
+        - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubernetes_sd_configs: *sd-pod
+          metric_relabel_configs:
+          - action: keep
+            source_labels: [__name__]
+            regex: container_cpu_usage_seconds_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_writes_bytes_total|container_memory_rss|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_spec_cpu_period|container_spec_cpu_quota|container_spec_memory_limit_bytes|target_info
+          # Drop cgroup metrics with no pod.
+          - action: drop
+            regex: '.+;'
+            source_labels: [id, pod]
+          # Drop id label
+          - action: labeldrop
+            regex: ^id$
+          relabel_configs:
+          - replacement: kubernetes.default.svc.cluster.local:443
+            target_label: __address__
+          - regex: (.+)
+            replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
+            source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: __metrics_path__
+          # Add lables
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: nodename
+          - replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+            target_label: cluster
+          scheme: https
+          scrape_interval: 1m
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
