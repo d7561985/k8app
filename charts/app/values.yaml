@@ -225,7 +225,7 @@ volume:
 
 hpa:
   enabled: true
-  minReplicas: 3
   maxReplicas: 6
-  cpu: 70
-  memory: 70
+  cpu: 75
+  memory: 75
+  requests:

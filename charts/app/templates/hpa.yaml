@@ -1,57 +1,32 @@
-{{- if .Values.hpa -}}
-apiVersion: autoscaling/v2beta2
+{{- if .Values.hpa.enabled -}}
+apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.labels.app }}
-  {{- if .Values.hpa.annotations }}
-  annotations:
-    {{- range $key, $val := .Values.hpa.annotations }}
-      {{ $key }}: {{ $val }}
-      {{- end }}
-  {{- end }}
-  labels:
-    {{- range $key, $val := .Values.labels }}
-      {{ $key }}: {{ $val | quote }}
-      {{- end }}
+  name: {{ template "podinfo.fullname" . }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.labels.app }}
-  minReplicas: {{ .Values.hpa.minReplicas | default "3"}}
-  maxReplicas: {{ .Values.hpa.maxReplicas | default "6"}}
-  {{- if .Values.hpa.behavior }}
-  behavior:
-    {{- toYaml .Values.hpa.behavior | nindent 4 }}
-  {{- end }}
+    name: {{ template "podinfo.fullname" . }}
+  minReplicas: {{ .Values.replicaCount }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
   metrics:
   {{- if .Values.hpa.cpu }}
   - type: Resource
     resource:
       name: cpu
-      target:
-        type: Utilization
-        averageUtilization: {{ .Values.hpa.cpu | default "70"  }}
+      targetAverageUtilization: {{ .Values.hpa.cpu }}
   {{- end }}
   {{- if .Values.hpa.memory }}
   - type: Resource
     resource:
       name: memory
-      target:
-        type: Utilization
-        averageUtilization: {{ .Values.hpa.memory | default "70" }}
+      targetAverageValue: {{ .Values.hpa.memory }}
   {{- end }}
-  {{- if .Values.hpa.customMetric }}
-  - type: Object
-    object:
-      metric:
-        name: {{ .Values.hpa.customMetric }}
-      describedObject:
-        apiVersion: v1
-        kind: Service
-        name: {{ .Values.hpa.customResource }}
-      target:
-        type: Value
-        value: {{ .Values.hpa.customTarget | default "100" }}
+  {{- if .Values.hpa.requests }}
+  - type: Pod
+      pods:
+        metricName: http_requests
+        targetAverageValue: {{ .Values.hpa.requests }}
   {{- end }}
   {{- end }}
