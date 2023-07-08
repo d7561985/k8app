@@ -2,7 +2,7 @@
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.labels.appName }}
+  name: {{ .Values.appName }}
   {{- if .Values.hpa.annotations }}
   annotations:
     {{- range $key, $val := .Values.hpa.annotations }}
@@ -17,7 +17,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.labels.appName }}
+    name: {{ .Values.appName }}
   minReplicas: {{ .Values.hpa.minReplicas | default "3"}}
   maxReplicas: {{ .Values.hpa.maxReplicas | default "6"}}
   {{- if .Values.hpa.behavior }}
