@@ -223,9 +223,9 @@ volume:
 #        type: gp3
 #        iops: "3000"
 
-hpa:
-  enabled: true
-  maxReplicas: 6
-  cpu: 75
-  memory: 75
-  requests:
+#hpa:
+#  enabled: true
+#  maxReplicas: 6
+#  cpu: 75
+#  memory: 75
+#  requests:
