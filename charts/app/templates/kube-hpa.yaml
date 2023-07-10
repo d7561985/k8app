@@ -1,33 +1,26 @@
 {{- if .Values.hpa -}}
-  {{- $apiIsStable := semverCompare ">= 1.23.x" (include "kubeVersion" .) -}}
-  {{- if $apiIsStable }}
-apiVersion: autoscaling/v2
-  {{ else }}
 apiVersion: autoscaling/v2beta2
-  {{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.labels.app }}
+  name: {{ .Values.appName }}
   {{- if .Values.hpa.annotations }}
   annotations:
-    {{- range $key, $val := .Values.hpa.annotations }}
-      {{ $key }}: {{ $val }}
-      {{- end }}
+    {{ toYaml .Values.hpa.annotations | indent 4 }}
   {{- end }}
   labels:
-    {{- range $key, $val := .Values.labels }}
-      {{ $key }}: {{ $val | quote }}
-      {{- end }}
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.labels.app }}
+    name: {{ .Values.appName }}
   minReplicas: {{ .Values.hpa.minReplicas | default "3"}}
   maxReplicas: {{ .Values.hpa.maxReplicas | default "6"}}
   {{- if .Values.hpa.behavior }}
   behavior:
-    {{- toYaml .Values.hpa.behavior | nindent 4 }}
+    {{- toYaml .Values.hpa.behavior | indent 4 }}
   {{- end }}
   metrics:
   {{- if .Values.hpa.cpu }}
@@ -59,4 +52,4 @@ spec:
         type: Value
         value: {{ .Values.hpa.customTarget | default "100" }}
   {{- end }}
-  {{- end }}
+{{- end }}
