@@ -5,14 +5,8 @@ metadata:
   name: {{ .Values.appName }}
   {{- if .Values.hpa.annotations }}
   annotations:
-    {{- range $key, $val := .Values.hpa.annotations }}
-      {{ $key }}: {{ $val }}
-      {{- end }}
+    {{ toYaml .Values.hpa.annotations | indent 4 }}
   {{- end }}
-  labels:
-    {{- range $key, $val := .Values.labels }}
-      {{ $key }}: {{ $val | quote }}
-      {{- end }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -22,7 +16,7 @@ spec:
   maxReplicas: {{ .Values.hpa.maxReplicas | default "6"}}
   {{- if .Values.hpa.behavior }}
   behavior:
-    {{- toYaml .Values.hpa.behavior | nindent 4 }}
+    {{- toYaml .Values.hpa.behavior | indent 4 }}
   {{- end }}
   metrics:
   {{- if .Values.hpa.cpu }}
