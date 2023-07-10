@@ -7,6 +7,10 @@ metadata:
   annotations:
     {{ toYaml .Values.hpa.annotations | indent 4 }}
   {{- end }}
+  labels:
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
