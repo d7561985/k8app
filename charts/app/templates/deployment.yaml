@@ -13,7 +13,9 @@ metadata:
   name: {{ $appname }}
 spec:
   revisionHistoryLimit: 1
+  {{- if not .Values.hpa.enabled }}
   replicas: {{ default 3 .Values.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app: {{ $appname }}
