@@ -16,7 +16,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ .Values.appName }}
-  minReplicas: {{ .Values.hpa.minReplicas | default "3"}}
+  minReplicas: {{ .Values.replicas | default "1"}}
   maxReplicas: {{ .Values.hpa.maxReplicas | default "6"}}
   {{- if .Values.hpa.behavior }}
   behavior:

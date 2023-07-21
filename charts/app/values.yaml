@@ -12,6 +12,9 @@ jaegerEnabled: false
 commands: []
 args: []
 
+# replica values
+# in case HPC enable
+# min HPA replica
 replicas: 1
 buildId:
 serviceAccountName: app  # infra should always create service account "app"
@@ -224,8 +227,7 @@ volume:
 #        iops: "3000"
 
 hpa:
-  enabled: true
-  minReplicas: 3
+  enabled: false
   maxReplicas: 6
   cpu: 70
   memory: 70
