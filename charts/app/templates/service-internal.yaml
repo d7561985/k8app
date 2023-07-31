@@ -1,0 +1,39 @@
+{{- if .Values.serviceInternal.enabled -}}
+{{- $serviceDefaultName :=  printf "%s-%s" (include "name" .) "int-sv" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    {{- if .Values.serviceInternal.annotations }}
+    {{- toYaml .Values.serviceInternal.annotations | nindent 4 }}
+    {{- end }}
+  namespace: {{ .Release.Namespace }}
+  name: {{ $serviceDefaultName }}
+  labels:
+    app: {{ template "name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+spec:
+  ports:
+  {{- range $key, $value := .Values.serviceInternal.ports }}
+  - port: {{ default 20999 $value.externalPort }}
+    targetPort: {{ $value.internalPort }}
+    protocol: {{ $value.protocol }}
+    name: {{ $key }}
+  {{- end }}
+  {{- if .Values.serviceInternal.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.serviceInternal.loadBalancerIP }}
+  {{- end -}}
+  {{- if .Values.serviceInternal.loadBalancerSourceRanges}}
+  loadBalancerSourceRanges:
+  {{- range .Values.serviceInternal.loadBalancerSourceRanges }}
+  - {{ . }}
+  {{- end }}
+  {{- end }}
+  selector:
+    app: {{ template "name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: LoadBalancer
+{{- end -}}
