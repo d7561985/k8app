@@ -28,7 +28,6 @@ spec:
       {{- end }}
       labels:
         app.kubernetes.io/component: {{ include "agent.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
         {{- include "agent.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
