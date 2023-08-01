@@ -521,7 +521,7 @@ prometheus:
               target_label: component
             - action: replace
               source_labels: [__meta_kubernetes_pod_container_name]
-              target_label: container
+              target_label: pod
 #            # but more importantly to follow grafana notion: <ns>/<container_name>
             - action: replace
               replacement: "$$1"
