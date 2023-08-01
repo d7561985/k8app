@@ -404,6 +404,9 @@ prometheus:
             - action: replace
               replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: origin_prometheus
+            - action: replace
+              source_labels: [__meta_kubernetes_pod_container_name]
+              target_label: pod
           metric_relabel_configs: [ ]
         # required helm name: kube-state-metrics
         # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
