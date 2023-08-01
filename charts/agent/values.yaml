@@ -239,13 +239,13 @@ config:
       metric_statements:
         - context: resource
           statements:
-            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "resource")
+#            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "container")
+#            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
             - delete_key(attributes, "k8s.container.name")
             - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
-            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
       log_statements:
         - context: resource
           statements:
