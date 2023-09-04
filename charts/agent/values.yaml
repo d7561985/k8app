@@ -475,6 +475,7 @@ prometheus:
         # prometheus.io/port: "7777"
         # prometheus.io/scrape: "true"
         # prometheus.io/param: "xxx=yyy"
+        # prometheus.io/custom.label/key: "value"
         #
         # use for self-monitoring
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
@@ -505,10 +506,11 @@ prometheus:
                 - __meta_kubernetes_pod_annotation_prometheus_io_port
               target_label: __address__
             - action: labelmap
+              regex: __meta_kubernetes_pod_annotation_prometheus_io_custom_label_(.+)
+              replacement: $$1
+            - action: labelmap
               regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
               replacement: __param_$$1
-            #            - action: labelmap
-            #              regex: __meta_kubernetes_pod_label_(.+)
             - action: drop
               regex: Pending|Succeeded|Failed|Completed
               source_labels:
