@@ -475,8 +475,10 @@ prometheus:
         # prometheus.io/port: "7777"
         # prometheus.io/scrape: "true"
         # prometheus.io/param: "xxx=yyy"
-        # prometheus.io/custom.label/key: "value"
+        # prometheus.io/custom.label.key: "value"
         #
+        # example:
+        #  prometheus.io/custom.label.origin_prometheus: "observability/com/dev"
         # use for self-monitoring
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
         - job_name: kubernetes-pods
