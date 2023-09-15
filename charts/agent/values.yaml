@@ -370,6 +370,11 @@ prometheus:
         - job_name: kube-state-metrics
           honor_labels: false
           kubernetes_sd_configs: &sd-pod
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
           relabel_configs:
             - action: keep
               source_labels:
