@@ -196,6 +196,10 @@ spec:
             - {{ . }}
               {{- end }}
     {{- end }}
+    {{- if eq .Values.livenessProbe.mode "grpc" }}
+          grpc:
+            port: {{ .Values.livenessProbe.grpc.port | default 8080 }}
+    {{- end }}
           initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 5 }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 5 }}
           successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
@@ -220,6 +224,10 @@ spec:
               {{- range .Values.readinessProbe.execCommand.command}}
             - {{ . }}
               {{- end }}
+    {{- end }}
+    {{- if eq .Values.readinessProbe.mode "grpc" }}
+          grpc:
+            port: {{ .Values.readinessProbe.grpc.port | default 8080 }}
     {{- end }}
           initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 5 }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 5 }}
