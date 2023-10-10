@@ -275,9 +275,6 @@ config:
     resource/loki:
       attributes:
         - action: insert
-          key: loki.format
-          value: logfmt
-        - action: insert
           key: loki.resource.labels
           value: project, license, deployment_environment, service, namespace, container, aws_region
     resource:
