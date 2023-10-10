@@ -275,9 +275,6 @@ config:
     resource/loki:
       attributes:
         - action: insert
-          key: loki.format
-          value: logfmt
-        - action: insert
           key: loki.resource.labels
           value: project, license, deployment_environment, service, namespace, container, aws_region
     resource:
@@ -439,10 +436,10 @@ prometheus:
         # prometheus.io/port: "7777"
         # prometheus.io/scrape: "true"
         # prometheus.io/param: "xxx=yyy"
-        # prometheus.io/custom.label.key: "value"
+        # prometheus.io/label.key: "value"
         #
         # example:
-        #  prometheus.io/custom.label.origin_prometheus: "observability/com/dev"
+        #  prometheus.io/label.origin_prometheus: "observability/com/dev"
         # use for self-monitoring
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
         - job_name: kubernetes-pods
@@ -471,9 +468,12 @@ prometheus:
                 - __address__
                 - __meta_kubernetes_pod_annotation_prometheus_io_port
               target_label: __address__
+            # SRE-26 Allow to add static labels to pod metrics via pod annotations
+            # Example:
+            #   Annotation on pod "prometheus.io/label-custom-label: custom-label-value"
+            #   will be added to a metrics produced by the bod as label custom_label with value custom-label-value
             - action: labelmap
-              regex: __meta_kubernetes_pod_annotation_prometheus_io_custom_label_(.+)
-              replacement: $$1
+              regex: __meta_kubernetes_pod_annotation_prometheus_io_label_(.+)
             - action: labelmap
               regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
               replacement: __param_$$1
