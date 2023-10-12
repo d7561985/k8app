@@ -365,27 +365,12 @@ prometheus:
         # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
         # dashboard ID: 13332
         - job_name: kube-state-metrics
-          honor_labels: false
-          kubernetes_sd_configs: &sd-pod
-            - role: pod
-              selectors:
-                - role: pod
-                  # only scrape data from pods running on the same node as collector
-                  field: "spec.nodeName=$NODE_NAME"
+          honor_labels: true
+          static_configs:
+            - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
           relabel_configs:
-            - action: keep
-              source_labels:
-                - __meta_kubernetes_pod_label_app_kubernetes_io_instance
-                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
-              regex: (kube-state-metrics);true
-            - action: keep
-              source_labels:
-                - __meta_kubernetes_pod_label_app_kubernetes_io_name
-                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
-              regex: (kube-state-metrics);true
             - action: drop
-              source_labels:
-                - __meta_kubernetes_pod_phase
+              source_labels: [__meta_kubernetes_pod_phase]
               regex: (Failed|Succeeded)
             - action: replace
               replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
@@ -400,7 +385,12 @@ prometheus:
         # dashboard ID: 15762
         - job_name: coredns
           honor_labels: false
-          kubernetes_sd_configs: *sd-pod
+          kubernetes_sd_configs: &sd-pod
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
           relabel_configs:
             - action: keep
               source_labels: # k8s-app: kube-dns
