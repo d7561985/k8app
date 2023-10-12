@@ -390,6 +390,9 @@ prometheus:
             - action: replace
               replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
               target_label: cluster
+            - action: replace
+              replacement: kube-state-metrics
+              target_label: job_name
         # coredns
         # https://grafana.com/grafana/dashboards/14981-coredns/
         # dashboard ID: 14981
@@ -413,6 +416,9 @@ prometheus:
               source_labels:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
+            - action: replace
+              replacement: coredns
+              target_label: job_name
         - job_name: 'kubernetes-kubelet'
           scrape_interval: 1m
           scheme: https
@@ -429,6 +435,9 @@ prometheus:
               regex: (.+)
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$$1/proxy/metrics
+            - action: replace
+              replacement: kubernetes-kubelet
+              target_label: job_name
         # search pods containing prometheus.io/scrape annotation
         #
         # example:
@@ -503,6 +512,9 @@ prometheus:
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
+            - action: replace
+              replacement: kubernetes-pods
+              target_label: job_name
         #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
         - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -534,6 +546,9 @@ prometheus:
             target_label: nodename
           - replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
             target_label: cluster
+          - action: replace
+            replacement: cadvisor
+            target_label: job_name
           scheme: https
           scrape_interval: 1m
           tls_config:
