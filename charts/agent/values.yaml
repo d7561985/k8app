@@ -364,20 +364,6 @@ prometheus:
     kubernetes:
       enabled: true
       scrape_configs:
-        # required helm name: kube-state-metrics
-        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
-        # dashboard ID: 13332
-        - job_name: kube-state-metrics
-          honor_labels: true
-          static_configs:
-            - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
-          relabel_configs:
-            - action: drop
-              source_labels: [__meta_kubernetes_pod_phase]
-              regex: (Failed|Succeeded)
-            - action: replace
-              replacement: kube-state-metrics
-              target_label: job_name
         # coredns
         # https://grafana.com/grafana/dashboards/14981-coredns/
         # dashboard ID: 14981
@@ -441,6 +427,8 @@ prometheus:
         #  prometheus.io/label.origin_prometheus: "observability/com/dev"
         # use for self-monitoring
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
+        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
+        # dashboard ID: 13332
         - job_name: kubernetes-pods
           kubernetes_sd_configs: *sd-pod
           honor_labels: false
