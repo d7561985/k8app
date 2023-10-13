@@ -505,7 +505,7 @@ prometheus:
         #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
         - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          kubernetes_sd_configs: *sd-pod
+          kubernetes_sd_configs: [role: node]
           metric_relabel_configs:
           - action: keep
             source_labels: [__name__]
