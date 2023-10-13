@@ -288,6 +288,9 @@ config:
         - key: deployment_environment
           value: "{{ .Values.info.deployment_environment }}"
           action: upsert
+        - key: cluster
+          value: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
+          action: upsert
         ### to the end after namespace declaration
         - action: upsert
           from_attribute: service
@@ -361,35 +364,6 @@ prometheus:
     kubernetes:
       enabled: true
       scrape_configs:
-        # required helm name: kube-state-metrics
-        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
-        # dashboard ID: 13332
-        - job_name: kube-state-metrics
-          honor_labels: false
-          kubernetes_sd_configs: &sd-pod
-            - role: pod
-              selectors:
-                - role: pod
-                  # only scrape data from pods running on the same node as collector
-                  field: "spec.nodeName=$NODE_NAME"
-          relabel_configs:
-            - action: keep
-              source_labels:
-                - __meta_kubernetes_pod_label_app_kubernetes_io_instance
-                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_instance
-              regex: (kube-state-metrics);true
-            - action: keep
-              source_labels:
-                - __meta_kubernetes_pod_label_app_kubernetes_io_name
-                - __meta_kubernetes_pod_labelpresent_app_kubernetes_io_name
-              regex: (kube-state-metrics);true
-            - action: drop
-              source_labels:
-                - __meta_kubernetes_pod_phase
-              regex: (Failed|Succeeded)
-            - action: replace
-              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-              target_label: cluster
         # coredns
         # https://grafana.com/grafana/dashboards/14981-coredns/
         # dashboard ID: 14981
@@ -397,7 +371,12 @@ prometheus:
         # dashboard ID: 15762
         - job_name: coredns
           honor_labels: false
-          kubernetes_sd_configs: *sd-pod
+          kubernetes_sd_configs: &sd-pod
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
           relabel_configs:
             - action: keep
               source_labels: # k8s-app: kube-dns
@@ -413,6 +392,9 @@ prometheus:
               source_labels:
                 - __meta_kubernetes_pod_phase
               regex: (Failed|Succeeded)
+            - action: replace
+              replacement: coredns
+              target_label: job_name
         - job_name: 'kubernetes-kubelet'
           scrape_interval: 1m
           scheme: https
@@ -429,6 +411,9 @@ prometheus:
               regex: (.+)
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$$1/proxy/metrics
+            - action: replace
+              replacement: kubernetes-kubelet
+              target_label: job_name
         # search pods containing prometheus.io/scrape annotation
         #
         # example:
@@ -442,6 +427,8 @@ prometheus:
         #  prometheus.io/label.origin_prometheus: "observability/com/dev"
         # use for self-monitoring
         # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
+        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
+        # dashboard ID: 13332
         - job_name: kubernetes-pods
           kubernetes_sd_configs: *sd-pod
           honor_labels: false
@@ -482,9 +469,6 @@ prometheus:
               source_labels:
                 - __meta_kubernetes_pod_phase
             - action: replace
-              replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-              target_label: cluster
-            - action: replace
               source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: component
             - action: replace
@@ -503,10 +487,13 @@ prometheus:
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
               target_label: job
+            - action: replace
+              replacement: kubernetes-pods
+              target_label: job_name
         #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
         - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          kubernetes_sd_configs: *sd-pod
+          kubernetes_sd_configs: [role: node]
           metric_relabel_configs:
           - action: keep
             source_labels: [__name__]
@@ -532,8 +519,9 @@ prometheus:
             target_label: node
           - source_labels: [__meta_kubernetes_pod_node_name]
             target_label: nodename
-          - replacement: "{{ .Values.info.project }}/{{ .Values.info.license }}/{{ .Values.info.deployment_environment }}"
-            target_label: cluster
+          - action: replace
+            replacement: cadvisor
+            target_label: job_name
           scheme: https
           scrape_interval: 1m
           tls_config:
