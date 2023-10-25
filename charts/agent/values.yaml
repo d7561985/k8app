@@ -239,8 +239,8 @@ config:
       metric_statements:
         - context: resource
           statements:
-            #            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "container")
-            #            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
+#            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "container")
+#            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
             - delete_key(attributes, "k8s.container.name")
@@ -378,7 +378,7 @@ config:
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,filter/non-container, resource/loki, transform, batch ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
         exporters: [ logging, otlp/global ]
       logs/raw:
         receivers: [ otlp, filelog ]
@@ -386,147 +386,147 @@ config:
         exporters: [ logging, otlp/global ]
 
 prometheus:
-  default:
-    enabled: true
-    # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
-    scrape_configs: []
-  append:
-    enabled: false
-    scrape_configs: []
-  kubernetes:
-    enabled: true
-    scrape_configs:
-      # coredns
-      # https://grafana.com/grafana/dashboards/14981-coredns/
-      # dashboard ID: 14981
-      # https://grafana.com/grafana/dashboards/15762-kubernetes-system-coredns/
-      # dashboard ID: 15762
-      - job_name: coredns
-        honor_labels: false
-        kubernetes_sd_configs: &sd-pod
-          - role: pod
-            selectors:
-              - role: pod
-                # only scrape data from pods running on the same node as collector
-                field: "spec.nodeName=$NODE_NAME"
-        relabel_configs:
-          - action: keep
-            source_labels: # k8s-app: kube-dns
-              - __meta_kubernetes_pod_label_k8s_app
-              - __meta_kubernetes_pod_labelpresent_k8s_app
-            regex: (kube-dns);true
-          - source_labels: [ __address__ ]
-            action: replace
-            target_label: __address__
-            regex: (.+?)(?::\d+)?
-            replacement: $$1:9153
-          - action: drop
-            source_labels:
-              - __meta_kubernetes_pod_phase
-            regex: (Failed|Succeeded)
-          - action: replace
-            replacement: coredns
-            target_label: job_name
-      - job_name: 'kubernetes-kubelet'
-        scrape_interval: 1m
-        scheme: https
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          insecure_skip_verify: true
-        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        kubernetes_sd_configs:
-          - role: node
-        relabel_configs:
-          - target_label: __address__
-            replacement: kubernetes.default.svc.cluster.local:443
-          - source_labels: [ __meta_kubernetes_node_name ]
-            regex: (.+)
-            target_label: __metrics_path__
-            replacement: /api/v1/nodes/$$1/proxy/metrics
-          - action: replace
-            replacement: kubernetes-kubelet
-            target_label: job_name
-      # search pods containing prometheus.io/scrape annotation
-      #
-      # example:
-      # prometheus.io/path: /metrics
-      # prometheus.io/port: "7777"
-      # prometheus.io/scrape: "true"
-      # prometheus.io/param: "xxx=yyy"
-      # prometheus.io/label.key: "value"
-      #
-      # example:
-      #  prometheus.io/label.origin_prometheus: "observability/com/dev"
-      # use for self-monitoring
-      # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
-      # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
-      # dashboard ID: 13332
-      - job_name: kubernetes-pods
-        kubernetes_sd_configs: *sd-pod
-        honor_labels: false
-        scrape_interval: 15s
-        relabel_configs:
-          - action: keep
-            regex: true
-            source_labels:
-              - __meta_kubernetes_pod_annotation_prometheus_io_scrape
-          - action: replace
-            regex: (https?)
-            source_labels:
-              - __meta_kubernetes_pod_annotation_prometheus_io_scheme
-            target_label: __scheme__
-          - action: replace
-            regex: (.+)
-            source_labels:
-              - __meta_kubernetes_pod_annotation_prometheus_io_path
-            target_label: __metrics_path__
-          - action: replace
-            regex: (.+?)(?::\d+)?;(\d+)
-            replacement: $$1:$$2
-            source_labels:
-              - __address__
-              - __meta_kubernetes_pod_annotation_prometheus_io_port
-            target_label: __address__
-          # SRE-26 Allow to add static labels to pod metrics via pod annotations
-          # Example:
-          #   Annotation on pod "prometheus.io/label-custom-label: custom-label-value"
-          #   will be added to a metrics produced by the bod as label custom_label with value custom-label-value
-          - action: labelmap
-            regex: __meta_kubernetes_pod_annotation_prometheus_io_label_(.+)
-          - action: labelmap
-            regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
-            replacement: __param_$$1
-          - action: drop
-            regex: Pending|Succeeded|Failed|Completed
-            source_labels:
-              - __meta_kubernetes_pod_phase
-          - action: replace
-            source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
-            target_label: component
-          - action: replace
-            source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: container
-          - action: replace
-            source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          #            # but more importantly to follow grafana notion: <ns>/<container_name>
-          - action: replace
-            replacement: "$$1"
-            source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: job
-          # but more importantly to follow grafana notion: <ns>/<component_name>
-          - action: replace
-            separator: "/"
-            source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
-            target_label: job
-          - action: replace
-            replacement: kubernetes-pods
-            target_label: job_name
-      #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
-      - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
-        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        kubernetes_sd_configs: [role: node]
-        metric_relabel_configs:
+    default:
+      enabled: true
+      # good documentation related to SD: https://docs.victoriametrics.com/sd_configs.html#kubernetes_sd_configs
+      scrape_configs: []
+    append:
+      enabled: false
+      scrape_configs: []
+    kubernetes:
+      enabled: true
+      scrape_configs:
+        # coredns
+        # https://grafana.com/grafana/dashboards/14981-coredns/
+        # dashboard ID: 14981
+        # https://grafana.com/grafana/dashboards/15762-kubernetes-system-coredns/
+        # dashboard ID: 15762
+        - job_name: coredns
+          honor_labels: false
+          kubernetes_sd_configs: &sd-pod
+            - role: pod
+              selectors:
+                - role: pod
+                  # only scrape data from pods running on the same node as collector
+                  field: "spec.nodeName=$NODE_NAME"
+          relabel_configs:
+            - action: keep
+              source_labels: # k8s-app: kube-dns
+                - __meta_kubernetes_pod_label_k8s_app
+                - __meta_kubernetes_pod_labelpresent_k8s_app
+              regex: (kube-dns);true
+            - source_labels: [ __address__ ]
+              action: replace
+              target_label: __address__
+              regex: (.+?)(?::\d+)?
+              replacement: $$1:9153
+            - action: drop
+              source_labels:
+                - __meta_kubernetes_pod_phase
+              regex: (Failed|Succeeded)
+            - action: replace
+              replacement: coredns
+              target_label: job_name
+        - job_name: 'kubernetes-kubelet'
+          scrape_interval: 1m
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubernetes_sd_configs:
+            - role: node
+          relabel_configs:
+            - target_label: __address__
+              replacement: kubernetes.default.svc.cluster.local:443
+            - source_labels: [ __meta_kubernetes_node_name ]
+              regex: (.+)
+              target_label: __metrics_path__
+              replacement: /api/v1/nodes/$$1/proxy/metrics
+            - action: replace
+              replacement: kubernetes-kubelet
+              target_label: job_name
+        # search pods containing prometheus.io/scrape annotation
+        #
+        # example:
+        # prometheus.io/path: /metrics
+        # prometheus.io/port: "7777"
+        # prometheus.io/scrape: "true"
+        # prometheus.io/param: "xxx=yyy"
+        # prometheus.io/label.key: "value"
+        #
+        # example:
+        #  prometheus.io/label.origin_prometheus: "observability/com/dev"
+        # use for self-monitoring
+        # dashboard: ID: 17728 https://grafana.com/grafana/dashboards/17728-opentelemetry-collector-0-68-0-v20221229/
+        # https://grafana.com/grafana/dashboards/13332-kube-state-metrics-v2/
+        # dashboard ID: 13332
+        - job_name: kubernetes-pods
+          kubernetes_sd_configs: *sd-pod
+          honor_labels: false
+          scrape_interval: 15s
+          relabel_configs:
+            - action: keep
+              regex: true
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+            - action: replace
+              regex: (https?)
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_scheme
+              target_label: __scheme__
+            - action: replace
+              regex: (.+)
+              source_labels:
+                - __meta_kubernetes_pod_annotation_prometheus_io_path
+              target_label: __metrics_path__
+            - action: replace
+              regex: (.+?)(?::\d+)?;(\d+)
+              replacement: $$1:$$2
+              source_labels:
+                - __address__
+                - __meta_kubernetes_pod_annotation_prometheus_io_port
+              target_label: __address__
+            # SRE-26 Allow to add static labels to pod metrics via pod annotations
+            # Example:
+            #   Annotation on pod "prometheus.io/label-custom-label: custom-label-value"
+            #   will be added to a metrics produced by the bod as label custom_label with value custom-label-value
+            - action: labelmap
+              regex: __meta_kubernetes_pod_annotation_prometheus_io_label_(.+)
+            - action: labelmap
+              regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
+              replacement: __param_$$1
+            - action: drop
+              regex: Pending|Succeeded|Failed|Completed
+              source_labels:
+                - __meta_kubernetes_pod_phase
+            - action: replace
+              source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+              target_label: component
+            - action: replace
+              source_labels: [__meta_kubernetes_pod_container_name]
+              target_label: container
+            - action: replace
+              source_labels: [__meta_kubernetes_pod_name]
+              target_label: pod
+#            # but more importantly to follow grafana notion: <ns>/<container_name>
+            - action: replace
+              replacement: "$$1"
+              source_labels: [__meta_kubernetes_pod_container_name]
+              target_label: job
+            # but more importantly to follow grafana notion: <ns>/<component_name>
+            - action: replace
+              separator: "/"
+              source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
+              target_label: job
+            - action: replace
+              replacement: kubernetes-pods
+              target_label: job_name
+        #[dashboard:ID: 15661](https://grafana.com/grafana/dashboards/15661-1-k8s-for-prometheus-dashboard-20211010/)
+        - job_name: cadvisor # daemonset_cadvisor kubernetes-cadvisor
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubernetes_sd_configs: [role: node]
+          metric_relabel_configs:
           - action: keep
             source_labels: [__name__]
             regex: container_cpu_usage_seconds_total|container_fs_limit_bytes|container_fs_usage_bytes|container_fs_writes_bytes_total|container_memory_rss|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_spec_cpu_period|container_spec_cpu_quota|container_spec_memory_limit_bytes|target_info
@@ -537,7 +537,7 @@ prometheus:
           # Drop id label
           - action: labeldrop
             regex: ^id$
-        relabel_configs:
+          relabel_configs:
           - replacement: kubernetes.default.svc.cluster.local:443
             target_label: __address__
           - regex: (.+)
@@ -554,8 +554,8 @@ prometheus:
           - action: replace
             replacement: cadvisor
             target_label: job_name
-        scheme: https
-        scrape_interval: 1m
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          insecure_skip_verify: true
+          scheme: https
+          scrape_interval: 1m
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            insecure_skip_verify: true
