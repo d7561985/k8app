@@ -378,7 +378,7 @@ config:
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,filter/non-container, resource/loki, transform, batch ]
         exporters: [ logging, otlp/global ]
       logs/raw:
         receivers: [ otlp, filelog ]
