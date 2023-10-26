@@ -272,14 +272,37 @@ config:
           value: level
         - action: delete
           key: time
+    resource/loki-labels:
+      attributes:
+        - action: insert
+          key: loki.resource.labels
+          value: project, license, deployment_environment, service, namespace, container, aws_region
     resource/loki:
       attributes:
         - action: insert
           key: loki.format
           value: logfmt
+    resource/loki-raw:
+      attributes:
         - action: insert
-          key: loki.resource.labels
-          value: project, license, deployment_environment, service, namespace, container, aws_region
+          key: loki.format
+          value: raw
+    filter/non-container:
+      error_mode: ignore
+      logs:
+        include:
+          match_type: regexp
+          resource_attributes:
+            - key: container
+              value: ^.+$
+    filter/container:
+      error_mode: ignore
+      logs:
+        exclude:
+          match_type: regexp
+          resource_attributes:
+            - key: container
+              value: ^.+$
     resource:
       attributes:
         - key: project
@@ -353,7 +376,11 @@ config:
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki, resource/loki, transform, batch ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/non-container, resource/loki, transform, batch ]
+        exporters: [ logging, otlp/global ]
+      logs/raw:
+        receivers: [ otlp, filelog ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/container, resource/loki, transform, batch ]
         exporters: [ logging, otlp/global ]
 
 prometheus:
