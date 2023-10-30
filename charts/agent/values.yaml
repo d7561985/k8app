@@ -290,7 +290,7 @@ config:
     filter/non-container:
       error_mode: ignore
       logs:
-        include:
+        exclude:
           match_type: regexp
           resource_attributes:
             - key: container
@@ -298,7 +298,7 @@ config:
     filter/container:
       error_mode: ignore
       logs:
-        exclude:
+        include:
           match_type: regexp
           resource_attributes:
             - key: container
@@ -380,7 +380,7 @@ config:
         exporters: [ logging, otlp/global ]
       logs/raw:
         receivers: [ otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/container, resource/loki, transform, batch ]
+        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/container, resource/loki-raw, transform, batch ]
         exporters: [ logging, otlp/global ]
 
 prometheus:
