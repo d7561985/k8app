@@ -293,16 +293,16 @@ config:
         exclude:
           match_type: regexp
           resource_attributes:
-            - key: container
-              value: ^.+$
+            - key: k8s.container.name
+              value: "^.+$"
     filter/container:
       error_mode: ignore
       logs:
         include:
           match_type: regexp
           resource_attributes:
-            - key: container
-              value: ^.+$
+            - key: k8s.container.name
+              value: "^.+$"
     resource:
       attributes:
         - key: project
@@ -376,11 +376,11 @@ config:
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/non-container, resource/loki, transform, batch ]
+        processors: [ filter/non-container, memory_limiter, k8sattributes, resource, attributes/loki, resource/loki-labels, resource/loki, transform, batch ]
         exporters: [ logging, otlp/global ]
       logs/raw:
         receivers: [ otlp, filelog ]
-        processors: [ memory_limiter, k8sattributes, resource, attributes/loki,resource/loki-labels,filter/container, resource/loki-raw, transform, batch ]
+        processors: [ filter/container, memory_limiter, k8sattributes, resource, attributes/loki, resource/loki-labels, resource/loki-raw, transform, batch ]
         exporters: [ logging, otlp/global ]
 
 prometheus:
