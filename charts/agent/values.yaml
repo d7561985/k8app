@@ -34,7 +34,7 @@ image:
   repository: otel/opentelemetry-collector-contrib
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.81.0"
+  tag: "0.88.0"
 
 imagePullSecrets: [ ]
 nameOverride: ""
@@ -262,29 +262,29 @@ config:
       attributes:
         - key: "service.name"
           from_attribute: "service"
-          action: insert
+          action: update
         - key: "service"
           action: delete
     attributes/loki:
       actions:
-        - action: insert
+        - action: update
           key: loki.attribute.labels
           value: level
         - action: delete
           key: time
     resource/loki-labels:
       attributes:
-        - action: insert
+        - action: update
           key: loki.resource.labels
           value: project, license, deployment_environment, service, namespace, container, aws_region
     resource/loki:
       attributes:
-        - action: insert
+        - action: update
           key: loki.format
           value: logfmt
     resource/loki-raw:
       attributes:
-        - action: insert
+        - action: update
           key: loki.format
           value: raw
     filter/non-container:
@@ -309,7 +309,7 @@ config:
         # bugfix: is already exist namespace - we mustn't replace it
         # previously was in transform/metric_statements and overwrite some important system metrics from k8s
         - key: namespace
-          action: insert
+          action: update
           from_attribute: k8s.namespace.name
         - key: k8s.namespace.name
           action: delete
