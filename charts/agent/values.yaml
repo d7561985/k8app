@@ -306,13 +306,13 @@ config:
     # must be after transform always!!!!
     resource/metrics:
       attributes:
-      # bugfix: is already exist namespace - we mustn't replace it
-      # previously was in transform/metric_statements and overwrite some important system metrics from k8s
-      - key: namespace
-        action: insert
-        from: k8s.namespace.name
-      - key: k8s.namespace.name
-        action: delete
+        # bugfix: is already exist namespace - we mustn't replace it
+        # previously was in transform/metric_statements and overwrite some important system metrics from k8s
+        - key: namespace
+          action: insert
+          from_attribute: k8s.namespace.name
+        - key: k8s.namespace.name
+          action: delete
     resource:
       attributes:
         - key: project
