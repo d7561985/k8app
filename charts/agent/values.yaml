@@ -304,15 +304,6 @@ config:
             - key: k8s.container.name
               value: "^.+$"
     # must be after transform always!!!!
-    resource/metrics:
-      attributes:
-        # bugfix: is already exist namespace - we mustn't replace it
-        # previously was in transform/metric_statements and overwrite some important system metrics from k8s
-        - key: namespace
-          action: update
-          from_attribute: k8s.namespace.name
-        - key: k8s.namespace.name
-          action: delete
     resource:
       attributes:
         - key: project
@@ -337,6 +328,13 @@ config:
         - key: http.scheme
           action: delete
         - key: net.host.port
+          action: delete
+        # bugfix: is already exist namespace - we mustn't replace it
+        # previously was in transform/metric_statements and overwrite some important system metrics from k8s
+        - key: namespace
+          action: update
+          from_attribute: k8s.namespace.name
+        - key: k8s.namespace.name
           action: delete
     batch:
       send_batch_size: 500
@@ -381,7 +379,7 @@ config:
         exporters: [ logging, otlp/global ]
       metrics/2:
         receivers: [ prometheus ]
-        processors: [ memory_limiter, transform, resource, transform/metrics, resource/metrics, batch/metrics ]
+        processors: [ memory_limiter, transform, resource, transform/metrics,  batch/metrics ]
         exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
