@@ -253,7 +253,7 @@ config:
             - delete_key(attributes, "k8s.container.restart_count")
             - replace_all_patterns(attributes, "key", "k8s.container.name", "container")
             - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
-            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
+            - replace_all_patterns(attributes, "key", "k8s.pod.name", "pod")
         - context: log
           statements:
             - delete_key(attributes, "logtag")
@@ -335,6 +335,13 @@ config:
           action: update
           from_attribute: k8s.namespace.name
         - key: k8s.namespace.name
+          action: delete
+        # bugfix: was replace existed system pod matrix when it was already existed liable, this cased creation label pod_export
+        # previously it was done by replace in prometheus job
+        - key: namespace
+          action: update
+          from_attribute: k8s.pod.name
+        - key: k8s.pod.name
           action: delete
     batch:
       send_batch_size: 500
@@ -511,9 +518,6 @@ prometheus:
             - action: replace
               source_labels: [__meta_kubernetes_pod_container_name]
               target_label: container
-            - action: replace
-              source_labels: [__meta_kubernetes_pod_name]
-              target_label: pod
 #            # but more importantly to follow grafana notion: <ns>/<container_name>
             - action: replace
               replacement: "$$1"
