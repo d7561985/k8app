@@ -267,7 +267,7 @@ config:
           action: delete
     attributes/loki:
       actions:
-        - action: update
+        - action: insert
           key: loki.attribute.labels
           value: level
         - action: delete
