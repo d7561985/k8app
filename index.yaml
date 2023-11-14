@@ -3,6 +3,16 @@ entries:
   agent:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2023-11-14T08:41:18.005793522Z"
+    description: A Helm chart for Kubernetes
+    digest: c5cd4d7d25c8655b6a827f41cad65ef20babd10f69b3c7a23fec063438d546cd
+    name: agent
+    type: application
+    urls:
+    - https://github.com/d7561985/k8app/releases/download/agent-1.1.12/agent-1.1.12.tgz
+    version: 1.1.12
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2023-11-10T16:25:09.704593989Z"
     description: A Helm chart for Kubernetes
     digest: 98071abfc6beac0f6fc948f6ad6d418e7b31539dd18bdbb409a3cbad81215303
@@ -1337,4 +1347,4 @@ entries:
     urls:
     - https://github.com/d7561985/k8app/releases/download/tel-0.1.3/tel-0.1.3.tgz
     version: 0.1.3
-generated: "2023-11-10T16:25:09.705014412Z"
+generated: "2023-11-14T08:41:18.006117094Z"
