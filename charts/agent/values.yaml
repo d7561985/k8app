@@ -274,17 +274,17 @@ config:
           key: time
     resource/loki-labels:
       attributes:
-        - action: update
+        - action: insert
           key: loki.resource.labels
           value: project, license, deployment_environment, service, namespace, container, aws_region
     resource/loki:
       attributes:
-        - action: update
+        - action: insert
           key: loki.format
           value: logfmt
     resource/loki-raw:
       attributes:
-        - action: update
+        - action: insert
           key: loki.format
           value: raw
     filter/non-container:
