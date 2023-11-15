@@ -21,8 +21,6 @@ service:
       name: otelgrpc
     - port: 4318
       name: otelhttp
-#    - port: 24224
-#      name: fluentforward
 
 rbac:
   create: true
@@ -62,6 +60,8 @@ securityContext: { }
 # runAsNonRoot: true
 # runAsUser: 1000
 
+affinity: {}
+nodeSelector: {}
 resources:
   limits:
     cpu: 1
@@ -69,23 +69,7 @@ resources:
   requests:
     cpu: 500m
     memory: 0.5Gi
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-
-nodeSelector: { }
-
-tolerations: [ ]
-
-affinity: { }
-
+tolerations: []
 
 # required AWS SSM parameter store certificates
 certs:
@@ -208,7 +192,6 @@ config:
           statements:
             # fix duplication: replace 127.0.0.1:8888 => host.name value
             - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["service.name"] == "{{ .Values.info.name }}"
-    # k8sattributes processor to get the metadata from K8s
     k8sattributes:
       auth_type: "serviceAccount"
       passthrough: false
@@ -234,18 +217,14 @@ config:
         - sources:
             - from: connection
               name: ip
-    # loki not support keys with dots - so replace it
     transform:
       metric_statements:
         - context: resource
           statements:
-#            - replace_all_patterns(attributes, "key", "k8s.(statefulset|deployment|daemonset|replicaset).name", "container")
-#            - replace_all_patterns(attributes, "key", "k8s.pod.name", "instance")
             - delete_key(attributes, "k8s.pod.uid")
             - delete_key(attributes, "k8s.container.restart_count")
             - delete_key(attributes, "k8s.container.name")
             - replace_all_patterns(attributes, "key", "k8s.node.name", "nodename")
-#            - replace_all_patterns(attributes, "key", "k8s.namespace.name", "namespace")
       log_statements:
         - context: resource
           statements:
@@ -547,12 +526,10 @@ prometheus:
             - action: replace
               source_labels: [__meta_kubernetes_pod_container_name]
               target_label: container
-#            # but more importantly to follow grafana notion: <ns>/<container_name>
             - action: replace
               replacement: "$$1"
               source_labels: [__meta_kubernetes_pod_container_name]
               target_label: job
-            # but more importantly to follow grafana notion: <ns>/<component_name>
             - action: replace
               separator: "/"
               source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app_kubernetes_io_component]
