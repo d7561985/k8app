@@ -276,7 +276,15 @@ config:
       attributes:
         - action: insert
           key: loki.resource.labels
-          value: project, license, deployment_environment, service, namespace, container, aws_region
+          value: >-
+            aws_region,
+            container,
+            deployment_environment,
+            license,
+            namespace,
+            pod,
+            project,
+            service
     resource/loki:
       attributes:
         - action: insert
