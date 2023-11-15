@@ -285,12 +285,12 @@ config:
             pod,
             project,
             service
-    resource/loki:
+    resource/loki-format-logfmt:
       attributes:
         - action: insert
           key: loki.format
           value: logfmt
-    resource/loki-raw:
+    resource/loki-format-raw:
       attributes:
         - action: insert
           key: loki.format
@@ -400,14 +400,31 @@ config:
       metrics/debug:
         <<: *metrics-pipeline
         receivers: [ prometheus ]
-      logs:
-        receivers: [  otlp, filelog ]
-        processors: [ filter/non-container, memory_limiter, k8sattributes, resource, attributes/loki, resource/loki-labels, resource/loki, transform, batch ]
+      logs/logfmt: &logs-pipeline
         exporters: [ logging, otlp/global ]
-      logs/raw:
+        processors:
+          - memory_limiter
+          - filter/non-container
+          - resource/loki-format-logfmt
+          - attributes/loki
+          - k8sattributes
+          - transform
+          - resource
+          - resource/loki-labels
+          - batch
         receivers: [ otlp, filelog ]
-        processors: [ filter/container, memory_limiter, k8sattributes, resource, attributes/loki, resource/loki-labels, resource/loki-raw, transform, batch ]
-        exporters: [ logging, otlp/global ]
+      logs/raw:
+        <<: *logs-pipeline
+        processors:
+          - memory_limiter
+          - filter/container
+          - resource/loki-format-raw
+          - attributes/loki
+          - k8sattributes
+          - transform
+          - resource
+          - resource/loki-labels
+          - batch
 
 prometheus:
     default:
