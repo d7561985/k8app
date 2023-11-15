@@ -380,14 +380,18 @@ config:
         receivers: [ otlp ]
         processors: [ memory_limiter, resource, resource/tempo, batch ]
         exporters: [ logging, otlp/global ]
-      metrics:
+      metrics: &metrics-pipeline
+        exporters: [ logging, otlp/global ]
+        processors:
+          - memory_limiter
+          - transform
+          - resource
+          - transform/metrics
+          - batch/metrics
         receivers: [ otlp ]
-        processors: [ memory_limiter, transform, resource, transform/metrics, batch/metrics ]
-        exporters: [ logging, otlp/global ]
-      metrics/2:
+      metrics/debug:
+        <<: *metrics-pipeline
         receivers: [ prometheus ]
-        processors: [ memory_limiter, transform, resource, transform/metrics,  batch/metrics ]
-        exporters: [ logging, otlp/global ]
       logs:
         receivers: [  otlp, filelog ]
         processors: [ filter/non-container, memory_limiter, k8sattributes, resource, attributes/loki, resource/loki-labels, resource/loki, transform, batch ]
