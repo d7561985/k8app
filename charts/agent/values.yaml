@@ -367,7 +367,7 @@ config:
         receivers: [ otlp ]
         processors: [ memory_limiter, resource, resource/tempo, batch ]
         exporters: [ logging, otlp/global ]
-      metrics: &metrics-pipeline
+      metrics:
         exporters: [ logging, otlp/global ]
         processors:
           - memory_limiter
@@ -375,10 +375,7 @@ config:
           - resource
           - transform/metrics
           - batch/metrics
-        receivers: [ otlp ]
-      metrics/debug:
-        <<: *metrics-pipeline
-        receivers: [ prometheus ]
+        receivers: [ otlp, prometheus ]
       logs/logfmt: &logs-pipeline
         exporters: [ logging, otlp/global ]
         processors:
