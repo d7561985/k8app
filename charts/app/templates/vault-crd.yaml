@@ -40,7 +40,7 @@ spec:
   region: {{ .Values.SecretProviderClass.region }}
   {{- end }}
   {{- if .Values.SecretProviderClass.failoverRegion }}
-  failoverRegion: {{ Values.SecretProviderClass.failoverRegion }}
+  failoverRegion: {{ .Values.SecretProviderClass.failoverRegion }}
   {{- end }}
   secretObjects: # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
     - secretName: {{ $appname }}
