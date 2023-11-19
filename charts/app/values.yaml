@@ -245,3 +245,9 @@ hpa:
   maxReplicas: 6
   cpu: 70
   memory: 70
+
+pdb:
+  enabled: false
+  annotations: {}
+  minAvailable: 1
+  maxUnavailable: 1
