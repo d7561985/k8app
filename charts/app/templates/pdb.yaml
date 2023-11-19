@@ -3,7 +3,9 @@ apiVersion: {{ default "policy/v1beta1" .Values.pdb.apiVersion }}
 kind: PodDisruptionBudget
 metadata:
   namespace: {{ .Release.Namespace }}
-  annotations: { }
+  {{- if .Values.pdb.annotations }}
+  annotations: {{ toJson .Values.pdb.annotations }}
+  {{- end }}
   labels:
     app: {{ template "name" . }}
     appver: "{{ .Values.image.tag }}"
@@ -20,4 +22,5 @@ spec:
   selector:
     matchLabels:
       app: {{ template "name" . }}
+      release: "{{ .Release.Name }}"
 {{- end }}
