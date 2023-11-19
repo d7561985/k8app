@@ -19,8 +19,4 @@ spec:
   {{- if .Values.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end }}
-  selector:
-    matchLabels:
-      app: {{ template "name" . }}
-      release: "{{ .Release.Name }}"
 {{- end }}
