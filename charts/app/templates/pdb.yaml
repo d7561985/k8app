@@ -1,0 +1,22 @@
+{{- if .Values.pdb.enabled -}}
+apiVersion: {{ default "policy/v1beta1" .Values.pdb.apiVersion }}
+kind: PodDisruptionBudget
+metadata:
+  namespace: {{ .Release.Namespace }}
+  {{- if .Values.pdb.annotations }}
+  annotations: {{ toJson .Values.pdb.annotations }}
+  {{- end }}
+  labels:
+    app: {{ template "name" . }}
+    appver: "{{ .Values.image.tag }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+  name: {{ .Values.appName }}
+spec:
+  {{- if .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- end }}
+  {{- if .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+{{- end }}

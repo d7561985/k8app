@@ -245,3 +245,7 @@ hpa:
   maxReplicas: 6
   cpu: 70
   memory: 70
+
+pdb:
+  enabled: false
+  maxUnavailable: 1
