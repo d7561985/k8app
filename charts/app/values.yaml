@@ -207,6 +207,10 @@ readinessProbe:
     port: 80
 
 secrets: {}
+#if you use EKS-A region to SecretProviderClass
+#SecretProviderClass:
+ # region: ""
+ # failoverRegion: ""
 configmap: {}
 vaultProjectName: ""
 vaultNamespace: ""
