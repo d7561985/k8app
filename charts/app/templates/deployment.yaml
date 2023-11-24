@@ -166,7 +166,7 @@ spec:
             mountPath: "/mnt/secrets-store"
           {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: Always
+        imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
         {{- with .Values.resources }}
         resources:
 {{ toYaml .  | indent 10 }}
