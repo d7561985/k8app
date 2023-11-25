@@ -63,7 +63,6 @@ serviceExternalName:
 image:
   repository: nginx
   tag: latest
-  pullPolicy: IfNotPresent
 
 lifecycle:
 #  preStop:
