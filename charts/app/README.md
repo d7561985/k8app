@@ -78,5 +78,12 @@ spec:
   resources:
     requests:
       storage: 5Gi
-```
 
+```
+### EKS-A
+Example use region in parameter store
+```yaml
+SecretProviderClass:
+  region: "eu-central-1"
+  failoverRegion: "eu-central-2"
+```

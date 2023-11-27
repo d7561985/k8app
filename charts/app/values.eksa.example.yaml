@@ -1,0 +1,74 @@
+appName: "nginx"
+environment: dev
+
+image:
+  repository: "nginx"
+  tag: "latest"
+
+configmap:
+  DEBUG: 'true'
+
+secrets:
+  SERVER_ADD: "/server/addr"
+
+SecretProviderClass:
+  region: "eu-central-1"
+  failoverRegion: "eu-central-2"
+
+worker:
+  enabled: true
+  replicas: 2
+  command: [ "printenv" ]
+  args: [ "HOSTNAME","PATH" ]
+
+job:
+  enabled: true
+  spec:
+    migrate-db:
+      backoffLimit: 1
+      command:
+        - /app/db
+        - migrate
+
+
+
+volume:
+  enabled: true
+  mount:
+    path: "/my-path"
+  resources:
+    requests:
+      storage: 2Gi
+  storageClass:
+    name: sc
+    create:
+      provisioner: "ebs.csi.aws.com"
+      parameters:
+        type: gp3
+        iops: "3000"
+
+resources:
+  limits:
+    memory: 1024Mi
+    cpu: 200m
+  requests:
+    memory: 128Mi
+    cpu: 100m
+
+tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"
+
+ingress:
+  enabled: true
+  extraHosts:
+    "some-host.com":
+      locations:
+        "/main":
+          serviceName: "test-sv"
+          servicePort: 8888
+        "/page":
+          serviceName: "test-sv"
+          servicePort: 8881

@@ -36,6 +36,12 @@ metadata:
     release: "{{ .Release.Name }}"
 spec:
   provider: aws
+{{- if $.Values.SecretProviderClass.region }}
+  region: {{ $.Values.SecretProviderClass.region }}
+{{- end }}
+{{- if $.Values.SecretProviderClass.failoverRegion }}
+  failoverRegion: {{ $.Values.SecretProviderClass.region }}
+{{- end }}
   secretObjects: # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
     - secretName: {{ $appname }}
       type: Opaque
@@ -51,4 +57,10 @@ spec:
         objectAlias: {{ $key }}
         objectType: "ssmparameter"
 {{- end }}
+    {{- if .Values.SecretProviderClass.region }}
+    region: {{ .Values.SecretProviderClass.region }}
+    {{- end }}
+    {{- if .Values.SecretProviderClass.failoverRegion }}
+    failoverRegion: {{ .Values.SecretProviderClass.failoverRegion }}
+    {{- end }}
 {{- end -}}
