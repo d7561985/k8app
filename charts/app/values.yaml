@@ -249,3 +249,29 @@ hpa:
 pdb:
   enabled: false
   maxUnavailable: 1
+
+extensions: []
+  # - name: "sidecar"
+  #   nameOverride: ""
+  #   image:
+  #     repository: "example.org"
+  #     name: "sidecar"
+  #     tag: "1.0.0"
+  #   command:
+  #     - start
+  #   args:
+  #     - arg1
+  #   env:
+  #     foo: bar
+  #   lifecycle: {}
+  #   livenessProbe:
+  #     httpGet: {}
+  #   readinessProbe:
+  #     httpGet: {}
+  #   resources:
+  #     limits:
+  #       memory: 100Mi
+  #       cpu: 0.1
+  #     requests:
+  #       memory: 100Mi
+  #       cpu: 0.1

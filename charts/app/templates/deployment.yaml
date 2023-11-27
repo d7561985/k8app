@@ -248,6 +248,94 @@ spec:
           - {{ . }}
         {{- end }}
     {{- end }}
+    {{- range .Values.extensions }}
+      {{- $name := .nameOverride | default (printf "%s-%s" $appname .name) }}
+      - name: {{ $name }}
+        image: "{{ .image.repository | default "" }}{{- if and .image.repository .image.name -}}/{{- end -}}{{ .image.name | default "" }}:{{ .image.tag | default "" }}"
+        {{- if .command }}
+        command:
+          {{- toYaml .command | nindent 10 }}
+        {{- end }}
+        {{- if .args }}
+        args:
+          {{- toYaml .args | nindent 10 }}
+        {{- end }}
+        env:
+          - name: BUILD_ID
+            value: {{ default "000" $.Values.buildId | quote }}
+          - name: PROJECT
+            value: {{ $name }}
+          - name: OTEL_SERVICE_NAME
+            value: {{ $name }}
+          - name: VERSION
+            value: {{ .image.tag | default $.Values.version | quote }}
+        {{- range $k, $v := .env }}
+          - name: {{ $k | upper }}
+            value: {{ $v | quote }}
+        {{- end }}
+        {{- if .lifecycle }}
+        lifecycle:
+          {{- toYaml .lifecycle | nindent 10 }}
+        {{- end }}
+        {{- if .livenessProbe }}
+        {{- with .livenessProbe }}
+        livenessProbe:
+          failureThreshold: {{ .failureThreshold | default 3 }}
+          {{- if hasKey . "httpGet" }}
+          httpGet:
+            path: {{ .httpGet.path | default "/health" }}
+            port: {{ .httpGet.port | default 80 }}
+            scheme: HTTP
+          {{- end }}
+          {{- if hasKey . "tcpSocket" }}
+          tcpSocket:
+            port: {{ .tcpSocket.port | default 80 }}
+          {{- end }}
+          {{- if hasKey . "execCommand" }}
+          exec:
+            command:
+              {{- toYaml .execCommand.command | nindent 14 }}
+          {{- end }}
+          {{- if hasKey . "grpc" }}
+          grpc:
+            port: {{ .grpc.port | default 8080 }}
+          {{- end }}
+          initialDelaySeconds: {{ .initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .periodSeconds | default 5 }}
+          successThreshold: {{ .successThreshold | default 1 }}
+          timeoutSeconds: {{ .timeoutSeconds | default 5 }}
+        {{- end }}
+        {{- end }}
+        {{- if .readinessProbe }}
+        {{- with .readinessProbe }}
+        readinessProbe:
+          failureThreshold: {{ .failureThreshold | default 3 }}
+          {{- if hasKey . "httpGet" }}
+          httpGet:
+            path: {{ .httpGet.path | default "/health" }}
+            port: {{ .httpGet.port | default 80 }}
+            scheme: HTTP
+          {{- end }}
+          {{- if hasKey . "tcpSocket" }}
+          tcpSocket:
+            port: {{ .tcpSocket.port }}
+          {{- end }}
+          {{- if .execCommand }}
+          exec:
+            command:
+              {{- toYaml .execCommand.command | nindent 14 }}
+          {{- end }}
+          {{- if hasKey . "grpc" }}
+          grpc:
+            port: {{ .grpc.port | default 8080 }}
+          {{- end }}
+          initialDelaySeconds: {{ .initialDelaySeconds | default 5 }}
+          periodSeconds: {{ .periodSeconds | default 5 }}
+          successThreshold: {{ .successThreshold | default 1 }}
+          timeoutSeconds: {{ .timeoutSeconds | default 5 }}
+        {{- end }}
+        {{- end }}
+    {{- end }}
     {{- if or .Values.deploySecretHarbor .Values.deploySecretNexus }}
       imagePullSecrets:
       - name: regsecret
