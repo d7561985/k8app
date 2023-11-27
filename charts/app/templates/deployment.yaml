@@ -81,6 +81,18 @@ spec:
             volumeAttributes:
               secretProviderClass: {{ $appname }}-aws-secrets
     {{- end }}
+        {{- if .Values.configfiles }}
+        - name: {{ printf "%s-config" $appname  }}
+          configMap:
+            name: {{ printf "%s-config" $appname }}
+        {{- end }}
+        {{- range .Values.extensions }}
+        {{- if .configfiles }}
+        - name: {{ printf "%s-%s-config" $appname .name }}
+          configMap:
+            name: {{ printf "%s-%s-config" $appname .name }}
+        {{- end }}
+        {{- end }}
     {{- if .Values.initContainers -}}
       initContainers:
         - name: {{ $appname }}-init
@@ -164,6 +176,11 @@ spec:
           - name: secrets-store-inline
             readOnly: true
             mountPath: "/mnt/secrets-store"
+          {{- end }}
+          {{- if .Values.configfiles }}
+          - name: {{ printf "%s-config" $appname }}
+            readOnly: true
+            mountPath: {{ .Values.configfiles.mountPath }}
           {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         {{- if .Values.image.pullPolicy }}
@@ -333,6 +350,12 @@ spec:
           periodSeconds: {{ .periodSeconds | default 5 }}
           successThreshold: {{ .successThreshold | default 1 }}
           timeoutSeconds: {{ .timeoutSeconds | default 5 }}
+        {{- end }}
+        {{- if .configfiles }}
+        volumeMounts:
+          - name: {{ printf "%s-%s-config" $appname .name }}
+            mountPath: {{ .configfiles.mountPath }}
+            readOnly: true
         {{- end }}
         {{- end }}
     {{- end }}

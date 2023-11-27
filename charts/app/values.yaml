@@ -250,6 +250,12 @@ pdb:
   enabled: false
   maxUnavailable: 1
 
+configfiles: {}
+  # mountPath: "/etc/app"
+  # data:
+  #   config.yaml: |-
+  #     foo: bar
+
 extensions: []
   # - name: "sidecar"
   #   nameOverride: ""
@@ -263,6 +269,11 @@ extensions: []
   #     - arg1
   #   env:
   #     foo: bar
+  #   configfiles:
+  #     mountPath: "/etc/sidecar"
+  #     data:
+  #       config.yaml: |-
+  #         foo: bar
   #   lifecycle: {}
   #   livenessProbe:
   #     httpGet: {}
