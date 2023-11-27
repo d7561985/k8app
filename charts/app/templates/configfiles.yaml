@@ -23,12 +23,12 @@ data:
 
 {{- if .Values.extensions }}
 ---
-{{- range .Values.extensions}}
-{{- if .configfiles }}
+{{- range $name, $spec := .Values.extensions}}
+{{- if $spec.configfiles }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-%s-config" $appname .name }}
+  name: {{ printf "%s-%s-config" $appname $name }}
   namespace: {{ $.Release.Namespace }}
   labels:
     app: {{ $appname }}
@@ -41,7 +41,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "-5"
 data:
-{{- range $key, $value := .configfiles.data }}
+{{- range $key, $value := $spec.configfiles.data }}
   {{ $key }}: {{ tpl $value $ | quote }}
 {{- end }}
 {{- end }}
