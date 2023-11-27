@@ -86,11 +86,12 @@ spec:
           configMap:
             name: {{ printf "%s-config" $appname }}
         {{- end }}
-        {{- range .Values.extensions }}
-        {{- if .configfiles }}
-        - name: {{ printf "%s-%s-config" $appname .name }}
+        {{- range $name, $spec := .Values.extensions }}
+        {{- if $spec.configfiles }}
+        {{- $name := printf "%s-%s-config" $appname $name }}
+        - name: {{ $name }}
           configMap:
-            name: {{ printf "%s-%s-config" $appname .name }}
+            name: {{ $name }}
         {{- end }}
         {{- end }}
     {{- if .Values.initContainers -}}
@@ -265,17 +266,17 @@ spec:
           - {{ . }}
         {{- end }}
     {{- end }}
-    {{- range .Values.extensions }}
-      {{- $name := .nameOverride | default (printf "%s-%s" $appname .name) }}
+    {{- range $name, $spec := .Values.extensions }}
+      {{- $name := printf "%s-%s" $appname $name }}
       - name: {{ $name }}
-        image: "{{ .image.repository | default "" }}{{- if and .image.repository .image.name -}}/{{- end -}}{{ .image.name | default "" }}:{{ .image.tag | default "" }}"
-        {{- if .command }}
+        image: "{{ $spec.image.repository | default "" }}{{- if and $spec.image.repository $spec.image.name -}}/{{- end -}}{{ $spec.image.name | default "" }}:{{ $spec.image.tag | default "" }}"
+        {{- if $spec.command }}
         command:
-          {{- toYaml .command | nindent 10 }}
+          {{- toYaml $spec.command | nindent 10 }}
         {{- end }}
-        {{- if .args }}
+        {{- if $spec.args }}
         args:
-          {{- toYaml .args | nindent 10 }}
+          {{- toYaml $spec.args | nindent 10 }}
         {{- end }}
         env:
           - name: BUILD_ID
@@ -285,17 +286,17 @@ spec:
           - name: OTEL_SERVICE_NAME
             value: {{ $name }}
           - name: VERSION
-            value: {{ .image.tag | default $.Values.version | quote }}
-        {{- range $k, $v := .env }}
+            value: {{ $spec.image.tag | default $.Values.version | quote }}
+        {{- range $k, $v := $spec.env }}
           - name: {{ $k | upper }}
             value: {{ $v | quote }}
         {{- end }}
-        {{- if .lifecycle }}
+        {{- if $spec.lifecycle }}
         lifecycle:
-          {{- toYaml .lifecycle | nindent 10 }}
+          {{- toYaml $spec.lifecycle | nindent 10 }}
         {{- end }}
-        {{- if .livenessProbe }}
-        {{- with .livenessProbe }}
+        {{- if $spec.livenessProbe }}
+        {{- with $spec.livenessProbe }}
         livenessProbe:
           failureThreshold: {{ .failureThreshold | default 3 }}
           {{- if hasKey . "httpGet" }}
@@ -323,8 +324,8 @@ spec:
           timeoutSeconds: {{ .timeoutSeconds | default 5 }}
         {{- end }}
         {{- end }}
-        {{- if .readinessProbe }}
-        {{- with .readinessProbe }}
+        {{- if $spec.readinessProbe }}
+        {{- with $spec.readinessProbe }}
         readinessProbe:
           failureThreshold: {{ .failureThreshold | default 3 }}
           {{- if hasKey . "httpGet" }}
@@ -351,10 +352,10 @@ spec:
           successThreshold: {{ .successThreshold | default 1 }}
           timeoutSeconds: {{ .timeoutSeconds | default 5 }}
         {{- end }}
-        {{- if .configfiles }}
+        {{- if $spec.configfiles }}
         volumeMounts:
-          - name: {{ printf "%s-%s-config" $appname .name }}
-            mountPath: {{ .configfiles.mountPath }}
+          - name: {{ printf "%s-config" $name }}
+            mountPath: {{ $spec.configfiles.mountPath }}
             readOnly: true
         {{- end }}
         {{- end }}

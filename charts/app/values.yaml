@@ -256,9 +256,8 @@ configfiles: {}
   #   config.yaml: |-
   #     foo: bar
 
-extensions: []
-  # - name: "sidecar"
-  #   nameOverride: ""
+extensions: {}
+  # authz:
   #   image:
   #     repository: "example.org"
   #     name: "sidecar"
