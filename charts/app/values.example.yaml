@@ -4,6 +4,7 @@ environment: dev
 image:
   repository: "nginx"
   tag: "latest"
+  pullPolicy: Always
 
 configmap:
   DEBUG: 'true'
@@ -25,8 +26,6 @@ job:
       command:
         - /app/db
         - migrate
-
-
 
 volume:
   enabled: true
