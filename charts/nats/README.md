@@ -56,7 +56,7 @@ appVersion: "1.16.0"
 
 dependencies:
   - name: nats
-    repository: https://d7561985.github.io/k8app
+    repository: https://pin-up-global.github.io/k8app
     version: 1.0.3
 ```
 
