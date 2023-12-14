@@ -291,6 +291,13 @@ spec:
           - name: {{ $k | upper }}
             value: {{ $v | quote }}
         {{- end }}
+        {{- range $key, $value := $.Values.secrets }}
+          - name: {{ $key }}
+            valueFrom:
+              secretKeyRef:
+                key: {{ $key }}
+                name: {{ $appname }}
+        {{- end }}
         {{- if $spec.lifecycle }}
         lifecycle:
           {{- toYaml $spec.lifecycle | nindent 10 }}
