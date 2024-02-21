@@ -23,14 +23,6 @@ spec:
     {{- toYaml .Values.hpa.behavior | indent 4 }}
   {{- end }}
   metrics:
-  {{- if .Values.hpa.cpu }}
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: {{ .Values.hpa.cpu | default "70"  }}
-  {{- end }}
   {{- if .Values.hpa.memory }}
   - type: Resource
     resource:
@@ -38,6 +30,14 @@ spec:
       target:
         type: Utilization
         averageUtilization: {{ .Values.hpa.memory | default "70" }}
+  {{- end }}
+  {{- if .Values.hpa.cpu }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.hpa.cpu | default "70"  }}
   {{- end }}
   {{- if .Values.hpa.customMetric }}
   - type: Object
