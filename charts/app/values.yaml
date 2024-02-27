@@ -80,6 +80,9 @@ prometheus:
   port: "8011"
   path: "/metrics"
 
+consulinject:
+  enabled: false
+
 resources: {}
   # requests:
   #   memory: 400Mi
