@@ -2,7 +2,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: nats-ebs-sc-gp3
+  name: "{{ .Release.Name }}-nats-ebs-sc-gp3"
   labels:
     {{- include "nats.labels" . | nindent 4 }}
 provisioner: ebs.csi.aws.com
