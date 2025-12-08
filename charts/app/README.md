@@ -2,6 +2,226 @@
 
 GitOps application optimized for AWS EKS
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Secrets](#secrets)
+  - [For Developers](#for-developers)
+  - [Path Convention](#path-convention)
+  - [For DevOps/Infrastructure](#for-devopsinfrastructure)
+- [ConfigMap](#configmap)
+- [Image Pull Secrets](#image-pull-secrets)
+- [Volume](#volume)
+
+---
+
+## Quick Start
+
+Minimal configuration for a new application:
+
+```yaml
+appName: "myapp"
+environment: "dev"
+
+# Environment variables from secrets (just like configmap!)
+secrets:
+  DB_PASSWORD: "database"
+  DB_USER: "database"
+  API_KEY: "api"
+
+# Environment variables from configmap
+configmap:
+  LOG_LEVEL: "info"
+  API_URL: "https://api.example.com"
+```
+
+That's it! The chart handles everything else automatically.
+
+---
+
+## Secrets
+
+### For Developers
+
+Secrets work exactly like `configmap` - just define your environment variables:
+
+```yaml
+secrets:
+  DB_PASSWORD: "database"      # Will be available as $DB_PASSWORD in your app
+  DB_USER: "database"          # Same Vault path, different key
+  API_KEY: "external/api"      # Different path
+```
+
+The chart automatically:
+1. Fetches secrets from Vault/AWS
+2. Creates a Kubernetes Secret
+3. Injects all keys as environment variables into your pods
+
+**You don't need to know about VaultStaticSecret, SecretProviderClass, or any Kubernetes internals.**
+
+### Path Convention
+
+Secrets are organized using a standardized path:
+
+```
+{namespace}/{appName}/{environment}/{your-path}
+```
+
+| You specify | Full path (auto-generated) |
+|-------------|----------------------------|
+| `database` | `myns/myapp/dev/database` |
+| `external/api` | `myns/myapp/dev/external/api` |
+| `/shared/global` | `shared/global` (absolute path) |
+
+**Absolute paths** (starting with `/`) bypass the convention and use the exact path.
+
+### For DevOps/Infrastructure
+
+The `secretsProvider` section configures which backend to use:
+
+```yaml
+secretsProvider:
+  provider: "vault"  # or "aws" or "none"
+
+  vault:
+    authRef: "vault-auth"     # VaultAuth resource (create once per namespace)
+    mount: "secret"           # KV engine mount
+    type: "kv-v2"             # kv-v2 recommended
+    refreshAfter: "1h"        # Sync interval
+
+  aws:
+    provider: "aws"           # For AWS SSM/Secrets Manager
+```
+
+#### Supported Providers
+
+| Provider | Backend | Requirements |
+|----------|---------|--------------|
+| `vault` | HashiCorp Vault | [Vault Secrets Operator](https://developer.hashicorp.com/vault/docs/deploy/kubernetes/vso) |
+| `aws` | AWS SSM/Secrets Manager | [Secrets Store CSI Driver](https://docs.aws.amazon.com/secretsmanager/latest/userguide/integrating_csi_driver.html) |
+| `none` | Legacy AWS CSI (default) | Secrets Store CSI Driver |
+
+#### Generated Resources
+
+**Vault provider** creates `VaultStaticSecret`:
+
+```yaml
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: myapp
+spec:
+  type: kv-v2
+  mount: secret
+  path: myns/myapp/dev/database
+  vaultAuthRef: vault-auth
+  destination:
+    name: myapp
+    create: true
+```
+
+**AWS provider** creates `SecretProviderClass`:
+
+```yaml
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: myapp-aws-secrets
+spec:
+  provider: aws
+  secretObjects:
+    - secretName: myapp
+      type: Opaque
+      data:
+        - objectName: "DB_PASSWORD"
+          key: "DB_PASSWORD"
+```
+
+### Migration from Legacy
+
+If you're using the old `valult: true` configuration, it will fail with an error.
+
+**Old (deprecated):**
+```yaml
+valult: true
+secrets:
+  DB_PASSWORD: "/ssm/prod/db/password"
+```
+
+**New:**
+```yaml
+secretsProvider:
+  provider: "vault"  # or "aws"
+
+secrets:
+  DB_PASSWORD: "database"
+```
+
+---
+
+## ConfigMap
+
+Define non-sensitive environment variables:
+
+```yaml
+configmap:
+  LOG_LEVEL: "info"
+  API_URL: "https://api.example.com"
+  FEATURE_FLAG: "true"
+```
+
+All keys are automatically injected as environment variables.
+
+---
+
+## Image Pull Secrets
+
+Universal support for any container registry.
+
+### New Configuration (Recommended)
+
+```yaml
+imagePullSecrets:
+  - name: gitlab-registry
+  - name: docker-hub
+  - name: ghcr-secret
+```
+
+### Legacy Configuration (Deprecated)
+
+```yaml
+# DEPRECATED - Still works but not recommended
+deploySecretHarbor: true   # Uses hardcoded "regsecret" name
+deploySecretNexus: true    # Uses hardcoded "regsecret" name
+```
+
+### Creating Registry Secrets
+
+```bash
+# GitLab Container Registry
+kubectl create secret docker-registry gitlab-registry \
+  --docker-server=registry.gitlab.com \
+  --docker-username=<deploy-token-user> \
+  --docker-password=<deploy-token> \
+  -n <namespace>
+
+# Docker Hub
+kubectl create secret docker-registry docker-hub \
+  --docker-server=https://index.docker.io/v1/ \
+  --docker-username=<username> \
+  --docker-password=<token> \
+  -n <namespace>
+
+# GitHub Container Registry
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=<username> \
+  --docker-password=<github-pat> \
+  -n <namespace>
+```
+
+---
+
 ## Volume
 Mount shared volume between pods and worker including init containers 
 We use dynamic provision approach.

@@ -2,6 +2,26 @@
 
 ## app
 
+### 3.4.0
+* **Secrets Management Overhaul** - Developer-friendly secrets interface
+  * Simple `secrets` map works like `configmap` - just specify `ENV_VAR: "path"`
+  * Automatic path generation: `{namespace}/{appName}/{environment}/{path}`
+  * Absolute paths support (prefix with `/`)
+* **HashiCorp Vault Secrets Operator (VSO) support**
+  * New provider `secretsProvider.provider: "vault"`
+  * Creates `VaultStaticSecret` resources automatically
+  * No CSI driver needed - VSO syncs directly to K8s Secrets
+* **AWS Secrets Manager improvements**
+  * New provider `secretsProvider.provider: "aws"`
+  * Unified interface with Vault provider
+* **Universal imagePullSecrets**
+  * New `imagePullSecrets` array for any container registry
+  * Supports multiple registries (GitLab, Docker Hub, GHCR, etc.)
+* **Deprecations**
+  * `valult` parameter now fails with migration guide
+  * `deploySecretHarbor`/`deploySecretNexus` deprecated (still works)
+* **Documentation** - Comprehensive README with examples for developers and DevOps
+
 ### 3.1.31
 * kubernetes-pods obtain cluster and component lables
 

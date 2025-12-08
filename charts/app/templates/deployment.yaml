@@ -73,7 +73,8 @@ spec:
             readOnly: {{.Values.volume.mount.readOnly}}
             claimName: {{template "persistantClaim" . }}
         {{- end -}}
-    {{- if .Values.secrets }}
+    {{- /* CSI volume only for AWS provider or legacy mode (not for Vault - VSO creates K8s Secret directly) */ -}}
+    {{- if and .Values.secrets (or (not .Values.secretsProvider) (ne .Values.secretsProvider.provider "vault")) }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -123,7 +124,8 @@ spec:
               mountPath: {{ .Values.volume.mount.path}}
               readOnly: {{.Values.volume.mount.readOnly}}
             {{- end -}}
-            {{- if .Values.secrets }}
+            {{- /* CSI volume mount only for AWS provider or legacy mode */ -}}
+            {{- if and .Values.secrets (or (not .Values.secretsProvider) (ne .Values.secretsProvider.provider "vault")) }}
             - name: secrets-store-inline
               mountPath: "/mnt/secrets-store"
             {{- end }}
@@ -173,7 +175,8 @@ spec:
             mountPath: {{ .Values.volume.mount.path}}
             readOnly: {{.Values.volume.mount.readOnly}}
           {{- end -}}
-          {{- if .Values.secrets }}
+          {{- /* CSI volume mount only for AWS provider or legacy mode */ -}}
+          {{- if and .Values.secrets (or (not .Values.secretsProvider) (ne .Values.secretsProvider.provider "vault")) }}
           - name: secrets-store-inline
             readOnly: true
             mountPath: "/mnt/secrets-store"
@@ -367,7 +370,12 @@ spec:
         {{- end }}
         {{- end }}
     {{- end }}
-    {{- if or .Values.deploySecretHarbor .Values.deploySecretNexus }}
+    {{- /* Image Pull Secrets - New universal approach */ -}}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- /* Legacy support for deploySecretHarbor/deploySecretNexus */ -}}
+    {{- else if or .Values.deploySecretHarbor .Values.deploySecretNexus }}
       imagePullSecrets:
       - name: regsecret
     {{- end }}

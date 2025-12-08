@@ -206,10 +206,79 @@ readinessProbe:
   tcpSocket:
     port: 80
 
+## =============================================================================
+## Secrets Configuration (for developers)
+## =============================================================================
+## Simple interface to define environment variables from external secret store.
+## Works like configmap - just specify ENV_VAR_NAME: "secret/path"
+##
+## The chart automatically:
+##   1. Creates VaultStaticSecret or AWS SecretProviderClass
+##   2. Syncs secrets to Kubernetes Secret
+##   3. Mounts all keys as environment variables in your pods
+##
+## Path convention: {namespace}/{appName}/{environment}/{your-path}
+## Example: if you set DB_PASSWORD: "database" in namespace "prod" with appName "myapp"
+##          and environment "production", the full path will be:
+##          prod/myapp/production/database
+## =============================================================================
 secrets: {}
+# Example:
+#   DB_PASSWORD: "database"      # -> {ns}/{app}/{env}/database
+#   DB_USER: "database"          # Same secret, different key
+#   API_KEY: "external/api"      # -> {ns}/{app}/{env}/external/api
+#   SHARED_SECRET: "/absolute/path/to/secret"  # Absolute path (starts with /)
+
+## =============================================================================
+## Secrets Provider Configuration (managed by DevOps/Infrastructure)
+## =============================================================================
+## Provider selection - determines which backend to use for secrets.
+## This is typically set once per cluster/environment by infrastructure team.
+## =============================================================================
+secretsProvider:
+  # Provider: "vault" | "aws" | "none"
+  # - vault: HashiCorp Vault via Vault Secrets Operator (recommended)
+  # - aws: AWS Secrets Manager / SSM via CSI Driver (legacy)
+  # - none: Disabled - secrets map is ignored
+  provider: "none"
+
+  # Vault Secrets Operator settings
+  # Docs: https://developer.hashicorp.com/vault/docs/deploy/kubernetes/vso
+  vault:
+    authRef: "vault-auth"     # VaultAuth resource name (created by infra)
+    mount: "secret"           # KV secrets engine mount
+    type: "kv-v2"             # Engine type: kv-v2 or kv-v1
+    refreshAfter: "1h"        # How often to sync secrets
+
+  # AWS Secrets Manager settings
+  aws:
+    provider: "aws"
+
 configmap: {}
+# Example (same simple interface as secrets):
+#   LOG_LEVEL: "debug"
+#   API_URL: "https://api.example.com"
+
+## Legacy parameters (DEPRECATED - do not use)
 vaultProjectName: ""
 vaultNamespace: ""
+
+## =============================================================================
+## Image Pull Secrets Configuration
+## =============================================================================
+## Universal imagePullSecrets support for any container registry.
+## Replaces legacy deploySecretHarbor/deploySecretNexus flags.
+## =============================================================================
+imagePullSecrets: []
+# Example:
+#   - name: gitlab-registry
+#   - name: docker-hub
+#   - name: ghcr-secret
+
+## Legacy flags (DEPRECATED - use imagePullSecrets instead)
+## Still supported for backward compatibility, uses hardcoded "regsecret" name
+# deploySecretHarbor: false
+# deploySecretNexus: false
 
 alerting: {}
   # rules:

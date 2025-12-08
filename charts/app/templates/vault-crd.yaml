@@ -1,24 +1,16 @@
-{{- if and .Values.valult .Values.secrets -}}
-{{- $appname := printf "%s" (include "name" .) -}}
-{{- $vaultpath := printf "secret/infra/%s/%s/%s" (include "vaultNamespace" .) (include "vaultProjectName" .) (include "environment" .) -}}
-apiVersion: v1
-kind: Vault
-metadata:
-  namespace: {{ .Release.Namespace }}
-  name: {{ $appname }}
-  labels:
-    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
-    app: {{ template "name" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: "{{ .Release.Name }}"
-  annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
-    "helm.sh/hook-weight": "-4"
-spec:
-  path: {{ $vaultpath }}
-  type: "KEYVALUEV2"
-  {{- else if .Values.secrets}}
+{{/*
+LEGACY: AWS Secrets Store CSI Driver support
+This template is used when secretsProvider.provider is "none" (default/legacy mode).
+For new deployments, use secretsProvider.provider: "vault" or "aws".
+*/}}
+
+{{- /* Fail hard if deprecated 'valult' parameter is used */ -}}
+{{- if .Values.valult -}}
+{{- fail "DEPRECATED: 'valult' parameter is deprecated and no longer supported. Please migrate to 'secretsProvider.provider: vault' with HashiCorp Vault Secrets Operator (VSO). See README.md for migration guide." -}}
+{{- end -}}
+
+{{- /* Legacy mode: only if secrets defined AND no new provider configured */ -}}
+{{- if and .Values.secrets (or (not .Values.secretsProvider) (eq .Values.secretsProvider.provider "none")) -}}
 {{- $appname := printf "%s" (include "name" .) -}}
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
@@ -27,21 +19,20 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     checksum/secrets: {{ printf "%v" .Values.secrets | sha256sum }}
-{{/*    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}*/}}
-    image/tag: "{{.Values.image.tag}}"
+    image/tag: "{{ .Values.image.tag }}"
   labels:
-    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     app: {{ template "name" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
 spec:
   provider: aws
-  secretObjects: # [OPTIONAL] SecretObject defines the desired state of synced K8s secret objects
+  secretObjects:
     - secretName: {{ $appname }}
       type: Opaque
       data:
 {{- range $key, $value := .Values.secrets }}
-        - objectName: {{ $key | quote}}
+        - objectName: {{ $key | quote }}
           key: {{ $key | quote }}
 {{- end }}
   parameters:
