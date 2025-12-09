@@ -2,6 +2,11 @@
 
 ## app
 
+### 3.5.2
+* **VaultStaticSecret release-triggered sync** - Added `app.kubernetes.io/version` annotation
+  * VSO immediately syncs secrets on new release (no waiting for `refreshAfter`)
+  * ArgoCD detects annotation change when `image.tag` updates
+
 ### 3.5.1
 * Fix: `serviceAccountName` default changed from `app` to empty (uses Kubernetes `default`)
 * Fix: Template whitespace issue with `initContainers` block
