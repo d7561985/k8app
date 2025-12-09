@@ -2,6 +2,10 @@
 
 ## app
 
+### 3.5.1
+* Fix: `serviceAccountName` default changed from `app` to empty (uses Kubernetes `default`)
+* Fix: Template whitespace issue with `initContainers` block
+
 ### 3.5.0
 * **Shared Volumes** - New `sharedVolumes` feature
   * Share volumes between main container, initContainers, and extensions

@@ -100,8 +100,8 @@ spec:
         - name: {{ $name }}
           {{- if eq $spec.type "emptyDir" }}
           emptyDir:
-            {{- if $spec.medium }}
-            medium: {{ $spec.medium }}
+            {{- with $spec.medium }}
+            medium: {{ . }}
             {{- end }}
           {{- else if eq $spec.type "configMap" }}
           configMap:
@@ -111,7 +111,7 @@ spec:
             secretName: {{ $spec.name | default (printf "%s-%s" $appname $name) }}
           {{- end }}
         {{- end }}
-    {{- if .Values.initContainers -}}
+    {{- if .Values.initContainers }}
       initContainers:
         - name: {{ $appname }}-init
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
