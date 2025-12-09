@@ -12,6 +12,7 @@ GitOps application optimized for AWS EKS
 - [ConfigMap](#configmap)
 - [Image Pull Secrets](#image-pull-secrets)
 - [Volume](#volume)
+- [Shared Volumes](#shared-volumes)
 
 ---
 
@@ -299,4 +300,55 @@ spec:
     requests:
       storage: 5Gi
 ```
+
+---
+
+## Shared Volumes
+
+Share volumes between main container, initContainers, and extensions (sidecars).
+
+### Supported Volume Types
+
+| Type | Description |
+|------|-------------|
+| `emptyDir` | Temporary storage, deleted when pod terminates |
+| `configMap` | Mount ConfigMap as volume |
+| `secret` | Mount Secret as volume |
+
+### Examples
+
+```yaml
+sharedVolumes:
+  # Temporary shared storage (disk-backed)
+  temp-data:
+    type: emptyDir
+    mountPath: /tmp/shared
+
+  # In-memory cache (faster, limited by RAM)
+  cache:
+    type: emptyDir
+    medium: Memory
+    mountPath: /cache
+
+  # ConfigMap volume
+  app-config:
+    type: configMap
+    name: my-configmap      # Optional: defaults to {appname}-{volumename}
+    mountPath: /etc/config
+    readOnly: true
+
+  # Secret volume
+  tls-certs:
+    type: secret
+    name: my-tls-secret     # Optional: defaults to {appname}-{volumename}
+    mountPath: /etc/ssl/certs
+    readOnly: true
+```
+
+### Use Cases
+
+- **Init data sharing**: initContainer prepares data, main container uses it
+- **Sidecar communication**: Main app and sidecar share files via emptyDir
+- **Config injection**: Mount ConfigMaps/Secrets as files instead of env vars
+- **Caching**: In-memory tmpfs for fast temporary storage
 

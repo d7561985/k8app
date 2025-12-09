@@ -95,6 +95,22 @@ spec:
             name: {{ $name }}
         {{- end }}
         {{- end }}
+        {{- /* Shared volumes for main container, initContainers, and extensions */ -}}
+        {{- range $name, $spec := .Values.sharedVolumes }}
+        - name: {{ $name }}
+          {{- if eq $spec.type "emptyDir" }}
+          emptyDir:
+            {{- if $spec.medium }}
+            medium: {{ $spec.medium }}
+            {{- end }}
+          {{- else if eq $spec.type "configMap" }}
+          configMap:
+            name: {{ $spec.name | default (printf "%s-%s" $appname $name) }}
+          {{- else if eq $spec.type "secret" }}
+          secret:
+            secretName: {{ $spec.name | default (printf "%s-%s" $appname $name) }}
+          {{- end }}
+        {{- end }}
     {{- if .Values.initContainers -}}
       initContainers:
         - name: {{ $appname }}-init
@@ -128,6 +144,16 @@ spec:
             {{- if and .Values.secrets (or (not .Values.secretsProvider) (ne .Values.secretsProvider.provider "vault")) }}
             - name: secrets-store-inline
               mountPath: "/mnt/secrets-store"
+            {{- end }}
+            {{- /* Shared volumes mounts for initContainers */ -}}
+            {{- range $name, $spec := .Values.sharedVolumes }}
+            {{- if $spec.mountPath }}
+            - name: {{ $name }}
+              mountPath: {{ $spec.mountPath }}
+              {{- if $spec.readOnly }}
+              readOnly: {{ $spec.readOnly }}
+              {{- end }}
+            {{- end }}
             {{- end }}
       {{- end }}
       containers:
@@ -185,6 +211,16 @@ spec:
           - name: {{ printf "%s-config" $appname }}
             readOnly: true
             mountPath: {{ .Values.configfiles.mountPath }}
+          {{- end }}
+          {{- /* Shared volumes mounts */ -}}
+          {{- range $name, $spec := .Values.sharedVolumes }}
+          {{- if $spec.mountPath }}
+          - name: {{ $name }}
+            mountPath: {{ $spec.mountPath }}
+            {{- if $spec.readOnly }}
+            readOnly: {{ $spec.readOnly }}
+            {{- end }}
+          {{- end }}
           {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         {{- if .Values.image.pullPolicy }}
@@ -362,11 +398,23 @@ spec:
           successThreshold: {{ .successThreshold | default 1 }}
           timeoutSeconds: {{ .timeoutSeconds | default 5 }}
         {{- end }}
-        {{- if $spec.configfiles }}
+        {{- if or $spec.configfiles $.Values.sharedVolumes }}
         volumeMounts:
+          {{- if $spec.configfiles }}
           - name: {{ printf "%s-config" $name }}
             mountPath: {{ $spec.configfiles.mountPath }}
             readOnly: true
+          {{- end }}
+          {{- /* Shared volumes mounts for extensions */ -}}
+          {{- range $volName, $volSpec := $.Values.sharedVolumes }}
+          {{- if $volSpec.mountPath }}
+          - name: {{ $volName }}
+            mountPath: {{ $volSpec.mountPath }}
+            {{- if $volSpec.readOnly }}
+            readOnly: {{ $volSpec.readOnly }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
         {{- end }}
         {{- end }}
     {{- end }}

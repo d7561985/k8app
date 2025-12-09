@@ -17,7 +17,7 @@ args: []
 # min HPA replica
 replicas: 1
 buildId:
-serviceAccountName: app  # infra should always create service account "app"
+serviceAccountName: ""  # empty = use "default" service account
 deployment:
   enabled: true
 
@@ -324,6 +324,40 @@ configfiles: {}
   # data:
   #   config.yaml: |-
   #     foo: bar
+
+## =============================================================================
+## Shared Volumes Configuration
+## =============================================================================
+## Shared volumes between main container, initContainers, and extensions.
+## Useful for sharing data, config files, or temporary storage between containers.
+## =============================================================================
+sharedVolumes: {}
+# Example:
+#   # EmptyDir for temporary shared storage
+#   temp-data:
+#     type: emptyDir
+#     medium: ""              # "" (disk) or "Memory" (tmpfs)
+#     mountPath: /tmp/shared
+#
+#   # EmptyDir with memory backing (faster, limited by RAM)
+#   cache:
+#     type: emptyDir
+#     medium: Memory
+#     mountPath: /cache
+#
+#   # ConfigMap volume
+#   app-config:
+#     type: configMap
+#     name: my-configmap      # Optional: defaults to {appname}-{volumename}
+#     mountPath: /etc/config
+#     readOnly: true
+#
+#   # Secret volume
+#   tls-certs:
+#     type: secret
+#     name: my-tls-secret     # Optional: defaults to {appname}-{volumename}
+#     mountPath: /etc/ssl/certs
+#     readOnly: true
 
 extensions: {}
   # authz:

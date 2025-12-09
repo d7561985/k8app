@@ -2,6 +2,12 @@
 
 ## app
 
+### 3.5.0
+* **Shared Volumes** - New `sharedVolumes` feature
+  * Share volumes between main container, initContainers, and extensions
+  * Supports `emptyDir`, `configMap`, and `secret` volume types
+  * Automatic naming convention: `{appname}-{volumename}`
+
 ### 3.4.0
 * **Secrets Management Overhaul** - Developer-friendly secrets interface
   * Simple `secrets` map works like `configmap` - just specify `ENV_VAR: "path"`
