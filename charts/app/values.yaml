@@ -112,6 +112,44 @@ ingress:
     #       serviceName: "test-sv"
     #       servicePort: 8889
 
+## =============================================================================
+## HTTPRoute - Gateway API (modern alternative to Ingress)
+## =============================================================================
+## Gateway API is the successor to Ingress. Provides better expressiveness,
+## header-based routing, traffic splitting, and cross-namespace routing.
+## Requires Gateway API CRDs installed in cluster.
+## Docs: https://gateway-api.sigs.k8s.io/
+## =============================================================================
+httpRoute:
+  enabled: false
+  # Annotations for the HTTPRoute resource
+  annotations: {}
+  # Parent Gateway references (required when enabled)
+  parentRefs: []
+    # - name: gateway-prod
+    #   namespace: gateway-prod
+    #   sectionName: https  # optional: specific listener
+  # Hostnames to match (optional, matches all if empty)
+  hostnames: []
+    # - app.example.com
+    # - www.app.example.com
+  # Routing rules (optional, defaults to catch-all route to this service)
+  rules: []
+    # - matches:
+    #     - path:
+    #         type: PathPrefix  # PathPrefix, Exact
+    #         value: /api
+    #       headers:            # optional header matching
+    #         - name: X-Version
+    #           value: beta
+    #       method: GET         # optional method matching
+    #   backendRefs:
+    #     - name: api-service-sv  # defaults to {appname}-sv
+    #       port: 8080            # defaults to service.ports[0].externalPort
+    #       namespace: other-ns   # optional cross-namespace
+    #       weight: 100           # optional for traffic splitting
+    #   filters: []               # optional filters (redirects, headers, etc)
+
 job:
 # If true, create simple jobs, e.g. migration
   enabled: false

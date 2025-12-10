@@ -352,3 +352,107 @@ sharedVolumes:
 - **Config injection**: Mount ConfigMaps/Secrets as files instead of env vars
 - **Caching**: In-memory tmpfs for fast temporary storage
 
+---
+
+## HTTPRoute (Gateway API)
+
+Modern alternative to Ingress. Gateway API is the successor to Ingress API with better expressiveness, header-based routing, traffic splitting, and cross-namespace routing.
+
+**Prerequisites:**
+```bash
+# Install Gateway API CRDs
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+```
+
+### Simple Frontend
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: gateway-prod
+      namespace: gateway-prod
+  hostnames:
+    - app.example.com
+```
+
+### Path-Based Routing
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: gateway-prod
+      namespace: gateway-prod
+  hostnames:
+    - app.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: api-gateway-sv
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+```
+
+### Traffic Splitting (Canary)
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: gateway-prod
+      namespace: gateway-prod
+  hostnames:
+    - app.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend-sv
+          port: 80
+          weight: 90
+        - name: frontend-canary-sv
+          port: 80
+          weight: 10
+```
+
+### Header-Based Routing (A/B Testing)
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: gateway-prod
+      namespace: gateway-prod
+  hostnames:
+    - app.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          headers:
+            - name: X-Version
+              value: beta
+      backendRefs:
+        - name: frontend-beta-sv
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+```
+
+**References:**
+- [Gateway API Documentation](https://gateway-api.sigs.k8s.io/)
+- [HTTPRoute API Reference](https://gateway-api.sigs.k8s.io/api-types/httproute/)
+- [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/)
+

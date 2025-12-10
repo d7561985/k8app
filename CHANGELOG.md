@@ -2,6 +2,13 @@
 
 ## app
 
+### 3.6.0
+* **Gateway API HTTPRoute Support** - Modern alternative to Ingress
+  * New `httpRoute` configuration for Kubernetes Gateway API
+  * Supports path-based routing, header matching, traffic splitting (canary)
+  * Cross-namespace backend references
+  * Compatible with Cilium, Envoy Gateway, NGINX Gateway Fabric, Istio
+
 ### 3.5.2
 * **VaultStaticSecret release-triggered sync** - Added `app.kubernetes.io/version` annotation
   * VSO immediately syncs secrets on new release (no waiting for `refreshAfter`)
