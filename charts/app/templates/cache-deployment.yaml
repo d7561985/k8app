@@ -1,0 +1,107 @@
+{{/*
+Ephemeral Redis Cache Deployment
+Creates a dedicated Redis instance for this service with optional Prometheus exporter.
+*/}}
+{{- if .Values.cache.enabled }}
+{{- $appname := include "name" . -}}
+{{- $cacheName := printf "%s-cache" $appname -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $cacheName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ $cacheName }}
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: {{ $appname }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $cacheName }}
+      release: "{{ .Release.Name }}"
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cache-configmap.yaml") . | sha256sum }}
+        {{- if .Values.cache.exporter.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.cache.exporter.port }}"
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        app: {{ $cacheName }}
+        app.kubernetes.io/component: cache
+        app.kubernetes.io/part-of: {{ $appname }}
+        release: "{{ .Release.Name }}"
+    spec:
+      {{- if .Values.serviceAccountName }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      {{- end }}
+      containers:
+        - name: redis
+          image: "{{ .Values.cache.image.repository }}:{{ .Values.cache.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+          ports:
+            - name: redis
+              containerPort: {{ .Values.cache.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: redis-config
+              mountPath: /etc/redis
+          resources:
+            {{- toYaml .Values.cache.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+        {{- if .Values.cache.exporter.enabled }}
+        - name: exporter
+          image: "{{ .Values.cache.exporter.image.repository }}:{{ .Values.cache.exporter.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.cache.exporter.port }}
+              protocol: TCP
+          env:
+            - name: REDIS_ADDR
+              value: "redis://localhost:{{ .Values.cache.port }}"
+          resources:
+            {{- toYaml .Values.cache.exporter.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        {{- end }}
+      volumes:
+        - name: redis-config
+          configMap:
+            name: {{ $cacheName }}-config
+{{- end }}

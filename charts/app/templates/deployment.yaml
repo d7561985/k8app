@@ -166,6 +166,10 @@ spec:
           value: {{ .Values.appName }}
         - name: VERSION
           value: {{ default .Values.image.tag .Values.version | quote }}
+    {{- if .Values.cache.enabled }}
+        - name: REDIS_URL
+          value: "redis://{{ $appname }}-cache-sv:{{ .Values.cache.port }}"
+    {{- end }}
     {{- if .Values.jaegerEnabled }}
         - name: JAEGER_AGENT_BINARY_PORT
           value: "6832"

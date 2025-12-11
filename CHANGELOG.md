@@ -2,6 +2,14 @@
 
 ## app
 
+### 3.7.0
+* **In-Memory Cache (Redis)** - On-demand ephemeral Redis for your service
+  * New `cache` configuration for dedicated Redis instance
+  * Automatic `REDIS_URL` environment variable injection
+  * Prometheus metrics exporter (oliver006/redis_exporter) as sidecar
+  * Optimized redis.conf with LRU eviction, no persistence
+  * Configurable resources, maxmemory, eviction policy
+
 ### 3.6.0
 * **Gateway API HTTPRoute Support** - Modern alternative to Ingress
   * New `httpRoute` configuration for Kubernetes Gateway API

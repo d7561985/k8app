@@ -456,3 +456,108 @@ httpRoute:
 - [HTTPRoute API Reference](https://gateway-api.sigs.k8s.io/api-types/httproute/)
 - [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/)
 
+---
+
+## In-Memory Cache (Redis)
+
+On-demand ephemeral Redis instance dedicated to your service. Perfect for session storage, API caching, rate limiting.
+
+**Features:**
+- Dedicated Redis per service (no shared state)
+- Ephemeral by design (no persistence)
+- Auto-eviction with LRU policy
+- Prometheus metrics exporter included
+- Automatic `REDIS_URL` environment variable
+
+### Basic Usage
+
+```yaml
+cache:
+  enabled: true
+```
+
+This creates:
+- Redis deployment (`{appname}-cache`)
+- Service (`{appname}-cache-sv:6379`)
+- ConfigMap with optimized redis.conf
+- `REDIS_URL` env var in your app
+
+### Custom Resources
+
+```yaml
+cache:
+  enabled: true
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  maxmemory: "400mb"  # Must be < limits.memory
+```
+
+### Full Configuration
+
+```yaml
+cache:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+  port: 6379
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  maxmemory: "200mb"
+  maxmemoryPolicy: "allkeys-lru"  # or volatile-lru, allkeys-lfu, etc.
+  extraConfig: |
+    # Additional redis.conf options
+    tcp-keepalive 60
+  exporter:
+    enabled: true  # Prometheus metrics on :9121/metrics
+    image:
+      repository: oliver006/redis_exporter
+      tag: "v1.66.0"
+```
+
+### Connecting from Your App
+
+The `REDIS_URL` environment variable is automatically set:
+
+```go
+// Go
+redisURL := os.Getenv("REDIS_URL")  // redis://myapp-cache-sv:6379
+```
+
+```python
+# Python
+import os
+redis_url = os.environ["REDIS_URL"]
+```
+
+```javascript
+// Node.js
+const redisUrl = process.env.REDIS_URL;
+```
+
+### Eviction Policies
+
+| Policy | Description | Use Case |
+|--------|-------------|----------|
+| `allkeys-lru` | Evict least recently used keys | General caching (default) |
+| `allkeys-lfu` | Evict least frequently used keys | Hot data caching |
+| `volatile-lru` | Evict LRU keys with TTL set | Mixed cache + persistent |
+| `volatile-ttl` | Evict keys with shortest TTL | TTL-based caching |
+
+### Important Notes
+
+- **Ephemeral**: Data is lost on pod restart (by design)
+- **Single replica**: Not for HA, use managed Redis for that
+- **maxmemory**: Always set lower than `resources.limits.memory`
+- **Dangerous commands disabled**: FLUSHDB, FLUSHALL, DEBUG
+

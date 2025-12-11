@@ -150,6 +150,49 @@ httpRoute:
     #       weight: 100           # optional for traffic splitting
     #   filters: []               # optional filters (redirects, headers, etc)
 
+## =============================================================================
+## In-Memory Cache (Redis) - Ephemeral cache for your service
+## =============================================================================
+## Creates a dedicated Redis instance for this service only.
+## Perfect for session storage, API caching, rate limiting.
+## Data is ephemeral - will be lost on pod restart (by design).
+## =============================================================================
+cache:
+  enabled: false
+  # Redis image
+  image:
+    repository: redis
+    tag: "7-alpine"
+  # Redis port
+  port: 6379
+  # Resources for Redis container
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  # Redis configuration
+  maxmemory: "200mb"              # Must be less than resources.limits.memory
+  maxmemoryPolicy: "allkeys-lru"  # Best for pure cache (evicts any key)
+  # Additional redis.conf options (optional)
+  extraConfig: ""
+  # Prometheus metrics exporter sidecar
+  exporter:
+    enabled: true
+    image:
+      repository: oliver006/redis_exporter
+      tag: "v1.66.0"
+    port: 9121
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "10m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+
 job:
 # If true, create simple jobs, e.g. migration
   enabled: false

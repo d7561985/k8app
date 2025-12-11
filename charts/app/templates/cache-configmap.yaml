@@ -1,0 +1,51 @@
+{{/*
+Redis Configuration ConfigMap
+Contains redis.conf optimized for ephemeral caching.
+*/}}
+{{- if .Values.cache.enabled }}
+{{- $appname := include "name" . -}}
+{{- $cacheName := printf "%s-cache" $appname -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cacheName }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ $cacheName }}
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: {{ $appname }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+data:
+  redis.conf: |
+    # Network
+    bind 0.0.0.0
+    port {{ .Values.cache.port }}
+    protected-mode no
+
+    # Memory Management (Ephemeral Cache)
+    maxmemory {{ .Values.cache.maxmemory }}
+    maxmemory-policy {{ .Values.cache.maxmemoryPolicy }}
+
+    # Disable persistence (ephemeral by design)
+    save ""
+    appendonly no
+
+    # Performance tuning
+    tcp-backlog 511
+    tcp-keepalive 300
+    timeout 0
+
+    # Logging
+    loglevel notice
+
+    # Disable dangerous commands in production
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    rename-command DEBUG ""
+
+    {{- if .Values.cache.extraConfig }}
+    # Extra configuration
+    {{ .Values.cache.extraConfig | nindent 4 }}
+    {{- end }}
+{{- end }}

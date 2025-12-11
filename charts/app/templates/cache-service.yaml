@@ -1,0 +1,35 @@
+{{/*
+Ephemeral Redis Cache Service
+Exposes Redis to the main application.
+*/}}
+{{- if .Values.cache.enabled }}
+{{- $appname := include "name" . -}}
+{{- $cacheName := printf "%s-cache" $appname -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $cacheName }}-sv
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ $cacheName }}
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: {{ $appname }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: {{ .Values.cache.port }}
+      targetPort: redis
+      protocol: TCP
+    {{- if .Values.cache.exporter.enabled }}
+    - name: metrics
+      port: {{ .Values.cache.exporter.port }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
+  selector:
+    app: {{ $cacheName }}
+    release: "{{ .Release.Name }}"
+{{- end }}
