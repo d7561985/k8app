@@ -50,3 +50,19 @@ Expand the vault project name of the release
 {{- define "persistantClaim" -}}
 {{- printf "%s-claim" (include "name" .) -}}
 {{- end -}}
+
+{{/*
+Selector labels for ServiceMonitor
+*/}}
+{{- define "app.selectorLabels" -}}
+app: {{ include "name" . }}
+release: {{ .Release.Name }}
+{{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "app.labels" -}}
+{{ include "app.selectorLabels" . }}
+chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+{{- end -}}

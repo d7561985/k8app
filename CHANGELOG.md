@@ -2,6 +2,17 @@
 
 ## app
 
+### 3.8.0
+* **ServiceMonitor Support** - Native Prometheus Operator integration
+  * New `serviceMonitor` configuration for automatic metrics discovery
+  * Works with kube-prometheus-stack out of the box
+  * Configurable scrape interval, timeout, path, and port
+  * Support for relabelings and metricRelabelings
+  * Graceful degradation - skipped if Prometheus Operator CRDs not installed
+* **Cache Exporter ServiceMonitor** - Redis metrics via Prometheus Operator
+  * Moved to `cache.exporter.serviceMonitor` (follows single responsibility)
+  * Enabled by default when `cache.exporter.enabled=true`
+
 ### 3.7.0
 * **In-Memory Cache (Redis)** - On-demand ephemeral Redis for your service
   * New `cache` configuration for dedicated Redis instance

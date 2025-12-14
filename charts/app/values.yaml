@@ -80,6 +80,31 @@ prometheus:
   port: "8011"
   path: "/metrics"
 
+# =============================================================================
+# ServiceMonitor - Prometheus Operator Integration
+# =============================================================================
+# Creates ServiceMonitor CRD for automatic discovery by Prometheus Operator.
+# Required: kube-prometheus-stack or Prometheus Operator installed in cluster.
+# =============================================================================
+serviceMonitor:
+  # Enable ServiceMonitor creation
+  enabled: false
+  # Scrape interval (default: 30s)
+  interval: 30s
+  # Scrape timeout (must be less than interval)
+  scrapeTimeout: 10s
+  # Metrics endpoint path
+  path: "/metrics"
+  # Service port name to scrape (must match key in service.ports)
+  port: "http"
+  # Labels for Prometheus selector (e.g., release: prometheus)
+  labels: {}
+  # Relabeling configs (optional)
+  relabelings: []
+  # Metric relabeling configs (optional)
+  metricRelabelings: []
+
+
 resources: {}
   # requests:
   #   memory: 400Mi
@@ -192,6 +217,12 @@ cache:
       limits:
         memory: "64Mi"
         cpu: "50m"
+    # ServiceMonitor for exporter (requires Prometheus Operator)
+    # Enabled by default - if you want exporter, you want metrics
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      labels: {}
 
 job:
 # If true, create simple jobs, e.g. migration

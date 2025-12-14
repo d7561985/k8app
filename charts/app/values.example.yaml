@@ -1,77 +1,335 @@
-appName: "nginx"
-environment: dev
+# =============================================================================
+# k8app v3.8.0 - Full Configuration Reference
+# =============================================================================
+# This file shows ALL available options for DevOps/Infrastructure teams.
+#
+# FOR DEVELOPERS: Use values.dev.example.yaml instead - it's much simpler!
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Basic Application Settings
+# -----------------------------------------------------------------------------
+appName: "myapp"
+environment: "dev"
+replicas: 2
 
 image:
-  repository: "nginx"
-  tag: "latest"
-  pullPolicy: Always
+  repository: "myorg/myapp"
+  tag: "v1.2.3"
+  pullPolicy: IfNotPresent
 
+# Custom command/args (optional)
+commands: []
+args: []
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  enabled: true
+  ports:
+    http:
+      externalPort: 8080
+      internalPort: 8080
+      protocol: TCP
+    # Dedicated metrics port (optional)
+    metrics:
+      externalPort: 9090
+      internalPort: 9090
+      protocol: TCP
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+livenessProbe:
+  enabled: true
+  mode: httpGet  # httpGet, tcpSocket, execCommand, grpc
+  httpGet:
+    port: 8080
+    path: "/health"
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  mode: httpGet
+  httpGet:
+    port: 8080
+    path: "/ready"
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+
+# -----------------------------------------------------------------------------
+# Resources
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# -----------------------------------------------------------------------------
+# Environment Variables
+# -----------------------------------------------------------------------------
 configmap:
-  DEBUG: 'true'
+  LOG_LEVEL: "info"
+  API_URL: "https://api.example.com"
+  FEATURE_FLAG: "true"
 
+# -----------------------------------------------------------------------------
+# Secrets (Vault or AWS)
+# -----------------------------------------------------------------------------
 secrets:
-  SERVER_ADD: "/server/addr"
+  DB_PASSWORD: "database"
+  DB_USER: "database"
+  API_KEY: "external/api"
 
-worker:
+secretsProvider:
+  provider: "vault"  # vault | aws | none
+  vault:
+    authRef: "vault-auth"
+    mount: "secret"
+    type: "kv-v2"
+    refreshAfter: "1h"
+
+# -----------------------------------------------------------------------------
+# Image Pull Secrets
+# -----------------------------------------------------------------------------
+imagePullSecrets:
+  - name: gitlab-registry
+
+# -----------------------------------------------------------------------------
+# Ingress (Classic)
+# -----------------------------------------------------------------------------
+ingress:
   enabled: true
-  replicas: 2
-  command: [ "printenv" ]
-  args: [ "HOSTNAME","PATH" ]
+  className: "nginx"
+  fqdn: "myapp.example.com"
+  vaultCert: "wildcard-example-com"
 
-job:
+# -----------------------------------------------------------------------------
+# HTTPRoute (Gateway API - Modern Alternative)
+# -----------------------------------------------------------------------------
+# httpRoute:
+#   enabled: true
+#   parentRefs:
+#     - name: gateway-prod
+#       namespace: gateway-prod
+#   hostnames:
+#     - myapp.example.com
+
+# -----------------------------------------------------------------------------
+# Horizontal Pod Autoscaler
+# -----------------------------------------------------------------------------
+hpa:
   enabled: true
-  spec:
-    migrate-db:
-      backoffLimit: 1
-      command:
-        - /app/db
-        - migrate
+  maxReplicas: 10
+  cpu: 70
+  memory: 80
 
+# -----------------------------------------------------------------------------
+# Pod Disruption Budget
+# -----------------------------------------------------------------------------
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+# -----------------------------------------------------------------------------
+# Prometheus Annotations (Legacy)
+# -----------------------------------------------------------------------------
+prometheus:
+  enabled: true
+  port: "9090"
+  path: "/metrics"
+
+# -----------------------------------------------------------------------------
+# ServiceMonitor (Prometheus Operator)
+# -----------------------------------------------------------------------------
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  path: "/metrics"
+  port: "metrics"
+  labels:
+    release: prometheus
+
+# -----------------------------------------------------------------------------
+# In-Memory Cache (Redis)
+# -----------------------------------------------------------------------------
+cache:
+  enabled: true
+  maxmemory: "200mb"
+  maxmemoryPolicy: "allkeys-lru"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  exporter:
+    enabled: true
+    # ServiceMonitor auto-enabled when exporter is enabled
+    serviceMonitor:
+      enabled: true  # default: true
+      labels:
+        release: prometheus
+
+# -----------------------------------------------------------------------------
+# Persistent Volume
+# -----------------------------------------------------------------------------
 volume:
   enabled: true
   mount:
-    path: "/my-path"
+    path: "/data"
+    readOnly: false
   resources:
     requests:
-      storage: 2Gi
+      storage: 10Gi
   storageClass:
-    name: sc
+    name: gp3
     create:
       provisioner: "ebs.csi.aws.com"
       parameters:
         type: gp3
         iops: "3000"
 
-resources:
-  limits:
-    memory: 1024Mi
-    cpu: 200m
-  requests:
-    memory: 128Mi
-    cpu: 100m
+# -----------------------------------------------------------------------------
+# Shared Volumes (between containers)
+# -----------------------------------------------------------------------------
+sharedVolumes:
+  temp-data:
+    type: emptyDir
+    mountPath: /tmp/shared
+  cache:
+    type: emptyDir
+    medium: Memory
+    mountPath: /cache
 
+# -----------------------------------------------------------------------------
+# Config Files (mounted as volume)
+# -----------------------------------------------------------------------------
+configfiles:
+  mountPath: "/etc/myapp"
+  data:
+    config.yaml: |
+      server:
+        port: 8080
+      logging:
+        level: info
+
+# -----------------------------------------------------------------------------
+# Sidecar Containers (Extensions)
+# -----------------------------------------------------------------------------
+extensions:
+  envoy:
+    image:
+      repository: "envoyproxy/envoy"
+      tag: "v1.28.0"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+
+# -----------------------------------------------------------------------------
+# Worker Deployments
+# -----------------------------------------------------------------------------
+worker:
+  enabled: true
+  spec:
+    queue-processor:
+      replicas: 2
+      command: ["./worker"]
+      args: ["--queue", "tasks"]
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+
+# -----------------------------------------------------------------------------
+# Jobs (one-time tasks)
+# -----------------------------------------------------------------------------
+job:
+  enabled: true
+  spec:
+    migrate-db:
+      backoffLimit: 3
+      command: ["./migrate"]
+      args: ["up"]
+
+# -----------------------------------------------------------------------------
+# CronJobs (scheduled tasks)
+# -----------------------------------------------------------------------------
+cronjob:
+  enabled: true
+  spec:
+    cleanup:
+      schedule: "0 2 * * *"
+      command: ["./cleanup"]
+      args: ["--older-than", "7d"]
+
+# -----------------------------------------------------------------------------
+# Tolerations & Node Selector
+# -----------------------------------------------------------------------------
 tolerations:
-  - key: "key1"
+  - key: "dedicated"
     operator: "Equal"
-    value: "value1"
+    value: "app"
     effect: "NoSchedule"
 
-ingress:
-  enabled: true
-  extraHosts:
-    "some-host.com":
-      locations:
-        "/main":
-          serviceName: "test-sv"
-          servicePort: 8888
-        "/page":
-          serviceName: "test-sv"
-          servicePort: 8881
+nodeSelector:
+  node-type: "app"
 
-pdb:
-  enabled: true
-  annotations: {
-    foo: "bar"
-  }
-  minAvailable: 1
-  maxUnavailable: 1
+# -----------------------------------------------------------------------------
+# Deployment Strategy
+# -----------------------------------------------------------------------------
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# -----------------------------------------------------------------------------
+# Lifecycle Hooks
+# -----------------------------------------------------------------------------
+lifecycle:
+  preStop:
+    exec:
+      command: ["sh", "-c", "sleep 10"]
+
+# -----------------------------------------------------------------------------
+# RBAC (if service needs K8s API access)
+# -----------------------------------------------------------------------------
+rbac:
+  create: true
+  resources:
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get", "list"]
+
+serviceAccountName: ""  # auto-created when rbac.create=true
+
+# -----------------------------------------------------------------------------
+# Alerting Rules (Prometheus)
+# -----------------------------------------------------------------------------
+alerting:
+  rules:
+    HighErrorRate:
+      expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        message: "High error rate detected (>5%)"

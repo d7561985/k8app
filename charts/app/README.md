@@ -13,6 +13,7 @@ GitOps application optimized for AWS EKS
 - [Image Pull Secrets](#image-pull-secrets)
 - [Volume](#volume)
 - [Shared Volumes](#shared-volumes)
+- [ServiceMonitor](#servicemonitor)
 
 ---
 
@@ -560,4 +561,116 @@ const redisUrl = process.env.REDIS_URL;
 - **Single replica**: Not for HA, use managed Redis for that
 - **maxmemory**: Always set lower than `resources.limits.memory`
 - **Dangerous commands disabled**: FLUSHDB, FLUSHALL, DEBUG
+
+---
+
+## ServiceMonitor
+
+Native Prometheus Operator integration for automatic metrics discovery. Works with kube-prometheus-stack out of the box.
+
+**Prerequisites:**
+- Prometheus Operator or kube-prometheus-stack installed
+- ServiceMonitor CRD (`monitoring.coreos.com/v1`) available in cluster
+
+### Basic Usage
+
+```yaml
+service:
+  enabled: true
+  ports:
+    http:
+      externalPort: 8080
+      internalPort: 8080
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: prometheus  # Match your Prometheus selector
+```
+
+This creates a ServiceMonitor that:
+- Scrapes `/metrics` on port `http`
+- Uses 30s scrape interval
+- Auto-discovered by Prometheus Operator
+
+### Dedicated Metrics Port
+
+```yaml
+service:
+  enabled: true
+  ports:
+    http:
+      externalPort: 8080
+      internalPort: 8080
+    metrics:
+      externalPort: 9090
+      internalPort: 9090
+
+serviceMonitor:
+  enabled: true
+  port: "metrics"
+  path: "/metrics"
+  labels:
+    release: prometheus
+```
+
+### Full Configuration
+
+```yaml
+serviceMonitor:
+  enabled: true
+  interval: 30s          # Scrape interval
+  scrapeTimeout: 10s     # Must be less than interval
+  path: "/metrics"       # Metrics endpoint path
+  port: "http"           # Service port name (from service.ports)
+  labels:                # Labels for Prometheus selector
+    release: prometheus
+  relabelings: []        # Relabeling rules
+  metricRelabelings: []  # Metric relabeling rules
+```
+
+### With Redis Cache Monitoring
+
+```yaml
+cache:
+  enabled: true
+  exporter:
+    enabled: true
+    # ServiceMonitor auto-enabled when exporter is enabled
+    serviceMonitor:
+      enabled: true  # default: true
+      labels:
+        release: prometheus
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: prometheus
+```
+
+Cache exporter ServiceMonitor is enabled by default when `cache.exporter.enabled=true` - no extra configuration needed.
+
+### Graceful Degradation
+
+If Prometheus Operator CRDs are not installed, ServiceMonitor creation is silently skipped. This allows the same chart to work in clusters with and without Prometheus Operator.
+
+### Migration from Annotations
+
+**Old approach (annotations-based):**
+```yaml
+prometheus:
+  enabled: true
+  port: "8011"
+  path: "/metrics"
+```
+
+**New approach (ServiceMonitor):**
+```yaml
+serviceMonitor:
+  enabled: true
+  port: "http"
+  path: "/metrics"
+```
+
+Both approaches can coexist. ServiceMonitor is preferred for Prometheus Operator deployments.
 

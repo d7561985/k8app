@@ -1,0 +1,92 @@
+# =============================================================================
+# Developer Quick Start - Copy this file and customize for your service
+# =============================================================================
+# Just fill in the basics below. Infrastructure (secrets provider, ingress
+# class, etc.) is pre-configured by DevOps team.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Your Application
+# -----------------------------------------------------------------------------
+appName: "my-service"        # Your service name (used everywhere)
+environment: "dev"           # dev | staging | prod
+
+image:
+  repository: "your-registry/your-image"
+  tag: "latest"              # Will be overridden by CI/CD
+
+# -----------------------------------------------------------------------------
+# 2. Service Ports
+# -----------------------------------------------------------------------------
+service:
+  enabled: true
+  ports:
+    http:
+      externalPort: 8080     # Port exposed to other services
+      internalPort: 8080     # Port your app listens on
+
+# -----------------------------------------------------------------------------
+# 3. Health Checks (adjust paths to match your app)
+# -----------------------------------------------------------------------------
+livenessProbe:
+  enabled: true
+  mode: httpGet
+  httpGet:
+    port: 8080
+    path: "/health"          # Your health endpoint
+
+readinessProbe:
+  enabled: true
+  mode: httpGet
+  httpGet:
+    port: 8080
+    path: "/ready"           # Your readiness endpoint (can be same as health)
+
+# -----------------------------------------------------------------------------
+# 4. Resources (start small, scale up if needed)
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# -----------------------------------------------------------------------------
+# 5. Environment Variables
+# -----------------------------------------------------------------------------
+configmap:
+  LOG_LEVEL: "debug"
+  # Add your non-sensitive config here
+  # API_URL: "https://api.example.com"
+
+# -----------------------------------------------------------------------------
+# 6. Secrets (from Vault - ask DevOps for paths)
+# -----------------------------------------------------------------------------
+secrets:
+  DB_PASSWORD: "database"    # -> {namespace}/{appName}/{env}/database
+  # DB_USER: "database"      # Same secret path, different key
+  # API_KEY: "external/api"  # -> {namespace}/{appName}/{env}/external/api
+
+# -----------------------------------------------------------------------------
+# 7. Redis Cache (optional - uncomment if needed)
+# -----------------------------------------------------------------------------
+# cache:
+#   enabled: true
+#   maxmemory: "100mb"
+#
+# Your app will get REDIS_URL env var automatically:
+# redis://my-service-cache-sv:6379
+
+# -----------------------------------------------------------------------------
+# 8. Ingress (optional - uncomment for external access)
+# -----------------------------------------------------------------------------
+# ingress:
+#   enabled: true
+#   fqdn: "my-service.dev.example.com"
+
+# =============================================================================
+# That's it! The rest is handled by infrastructure.
+# Run: helm upgrade --install my-service k8app/app -f values.yaml
+# =============================================================================
