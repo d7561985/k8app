@@ -119,20 +119,24 @@ spec:
 {{ .Values.initContainers.command  | toYaml | indent 12}}
           args:
 {{ .Values.initContainers.args | toYaml | indent 12}}
-          env:
-      {{- if .Values.secrets }}
-      {{- range $key, $value := .Values.secrets }}
-            - name: {{ $key }}
-              valueFrom:
-                secretKeyRef:
-                  key: {{ $key }}
-                  name: {{ $appname }}
-      {{- end }}
-      {{- end }}
-      {{- if .Values.configmap }}
+      {{- if or .Values.secrets .Values.configmap }}
           envFrom:
+            {{- if .Values.configmap }}
             - configMapRef:
                 name: {{ $appname }}
+            {{- end }}
+            {{- if and .Values.secrets (eq (include "secrets.isVaultEnabled" .) "true") }}
+            {{- $secretsByPath := dict -}}
+            {{- range $envVar, $pathTemplate := .Values.secrets -}}
+            {{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $) -}}
+            {{- $_ := set $secretsByPath $resolvedPath true -}}
+            {{- end -}}
+            {{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
+            {{- range $pathIndex, $path := $sortedPaths }}
+            - secretRef:
+                name: {{ $appname }}-vault-{{ $pathIndex }}
+            {{- end }}
+            {{- end }}
       {{- end }}
           volumeMounts:
             {{- if .Values.volume.enabled }}
@@ -185,19 +189,24 @@ spec:
               apiVersion: v1
               fieldPath: status.hostIP
     {{- end }}
-    {{- if .Values.secrets }}
-    {{- range $key, $value := .Values.secrets }}
-        - name: {{ $key }}
-          valueFrom:
-            secretKeyRef:
-              key: {{ $key }}
-              name: {{ $appname }}
-    {{- end }}
-    {{- end }}
-    {{- if .Values.configmap }}
+    {{- if or .Values.secrets .Values.configmap }}
         envFrom:
+        {{- if .Values.configmap }}
         - configMapRef:
             name: {{ $appname }}
+        {{- end }}
+        {{- if and .Values.secrets (eq (include "secrets.isVaultEnabled" .) "true") }}
+        {{- $secretsByPath := dict -}}
+        {{- range $envVar, $pathTemplate := .Values.secrets -}}
+        {{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $) -}}
+        {{- $_ := set $secretsByPath $resolvedPath true -}}
+        {{- end -}}
+        {{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
+        {{- range $pathIndex, $path := $sortedPaths }}
+        - secretRef:
+            name: {{ $appname }}-vault-{{ $pathIndex }}
+        {{- end }}
+        {{- end }}
     {{- end }}
         volumeMounts:
           {{- if .Values.volume.enabled }}
@@ -334,12 +343,18 @@ spec:
           - name: {{ $k | upper }}
             value: {{ $v | quote }}
         {{- end }}
-        {{- range $key, $value := $.Values.secrets }}
-          - name: {{ $key }}
-            valueFrom:
-              secretKeyRef:
-                key: {{ $key }}
-                name: {{ $appname }}
+        {{- if and $.Values.secrets (eq (include "secrets.isVaultEnabled" $) "true") }}
+        envFrom:
+          {{- $secretsByPath := dict -}}
+          {{- range $envVar, $pathTemplate := $.Values.secrets -}}
+          {{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $) -}}
+          {{- $_ := set $secretsByPath $resolvedPath true -}}
+          {{- end -}}
+          {{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
+          {{- range $pathIndex, $path := $sortedPaths }}
+          - secretRef:
+              name: {{ $appname }}-vault-{{ $pathIndex }}
+          {{- end }}
         {{- end }}
         {{- if $spec.lifecycle }}
         lifecycle:

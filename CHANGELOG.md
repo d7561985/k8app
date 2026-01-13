@@ -2,6 +2,20 @@
 
 ## app
 
+### 3.9.0
+* **Multi-Source Secrets** - Support for multiple Vault paths with shared secrets
+  * Explicit paths with `{env}` placeholder: `brand/shared/{env}/config`
+  * Automatic grouping by Vault path - one VaultStaticSecret per unique path
+  * `transformation.includes` filters only specified keys from each path
+  * Shared secrets without duplication - one source for multiple services
+  * Simplified secret rotation - update once, synced everywhere
+* **envFrom injection** - Cleaner secret mounting
+  * Replaced individual `secretKeyRef` with `envFrom` + `secretRef`
+  * Less boilerplate in generated manifests
+  * Automatic reference to all vault secrets
+* **Stable path ordering** - Sorted paths prevent unnecessary ArgoCD diffs
+* **Breaking change**: Path format changed from relative (`database`) to explicit (`brand/app/{env}/config`)
+
 ### 3.8.0
 * **ServiceMonitor Support** - Native Prometheus Operator integration
   * New `serviceMonitor` configuration for automatic metrics discovery

@@ -32,19 +32,14 @@ true
 {{- end -}}
 
 {{/*
-Generate secret path based on convention or absolute path
+Resolve {env} placeholder in secret path
 Input: dict with "path" (from secrets map value), "root" (root context)
-Convention: {namespace}/{appName}/{environment}/{path}
-Absolute paths (starting with /) are used as-is without the leading slash
+Example: "brand/shared/{env}/config" with environment=dev → "brand/shared/dev/config"
 */}}
 {{- define "secrets.resolvePath" -}}
 {{- $path := .path -}}
-{{- $root := .root -}}
-{{- if hasPrefix "/" $path -}}
-{{- trimPrefix "/" $path -}}
-{{- else -}}
-{{- printf "%s/%s/%s/%s" $root.Release.Namespace $root.Values.appName $root.Values.environment $path -}}
-{{- end -}}
+{{- $environment := .root.Values.environment -}}
+{{- $path | replace "{env}" $environment -}}
 {{- end -}}
 
 {{/*

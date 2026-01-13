@@ -25,11 +25,10 @@ Minimal configuration for a new application:
 appName: "myapp"
 environment: "dev"
 
-# Environment variables from secrets (just like configmap!)
+# Environment variables from secrets
 secrets:
-  DB_PASSWORD: "database"
-  DB_USER: "database"
-  API_KEY: "api"
+  DB_PASSWORD: "brand/myapp/{env}/config"
+  SHARED_SECRET: "brand/shared/{env}/config"
 
 # Environment variables from configmap
 configmap:
@@ -45,37 +44,58 @@ That's it! The chart handles everything else automatically.
 
 ### For Developers
 
-Secrets work exactly like `configmap` - just define your environment variables:
+Define environment variables with explicit Vault paths. Use `{env}` placeholder for environment substitution:
 
 ```yaml
 secrets:
-  DB_PASSWORD: "database"      # Will be available as $DB_PASSWORD in your app
-  DB_USER: "database"          # Same Vault path, different key
-  API_KEY: "external/api"      # Different path
+  # Shared secrets (one source for all services)
+  RABBITMQ_PASSWORD: "brand/shared/{env}/config"
+  RABBITMQ_USER: "brand/shared/{env}/config"
+
+  # Service-specific secrets
+  DB_PASSWORD: "brand/myapp/{env}/config"
+  API_KEY: "brand/myapp/{env}/config"
+
+  # Static path (no {env} substitution)
+  MONGO_CERT: "brand/mongodb/client-cert"
 ```
 
 The chart automatically:
-1. Fetches secrets from Vault/AWS
-2. Creates a Kubernetes Secret
-3. Injects all keys as environment variables into your pods
-
-**You don't need to know about VaultStaticSecret, SecretProviderClass, or any Kubernetes internals.**
+1. Replaces `{env}` with your environment (dev/staging/prod)
+2. Groups secrets by Vault path
+3. Creates VaultStaticSecret for each unique path
+4. Filters only specified keys via `transformation.includes`
+5. Injects secrets as environment variables via `envFrom`
 
 ### Path Convention
 
-Secrets are organized using a standardized path:
-
 ```
-{namespace}/{appName}/{environment}/{your-path}
+{brand}/{app-or-shared}/{env}/config
 ```
 
-| You specify | Full path (auto-generated) |
-|-------------|----------------------------|
-| `database` | `myns/myapp/dev/database` |
-| `external/api` | `myns/myapp/dev/external/api` |
-| `/shared/global` | `shared/global` (absolute path) |
+| You specify | Result (environment=dev) |
+|-------------|--------------------------|
+| `brand/myapp/{env}/config` | `brand/myapp/dev/config` |
+| `brand/shared/{env}/config` | `brand/shared/dev/config` |
+| `brand/mongodb/client-cert` | `brand/mongodb/client-cert` (no substitution) |
 
-**Absolute paths** (starting with `/`) bypass the convention and use the exact path.
+### Benefits of Shared Secrets
+
+**Before (duplication):**
+```bash
+# Same password in 5 places
+vault kv put secret/brand/finance/dev/config RABBITMQ_PASSWORD="xxx"
+vault kv put secret/brand/messaging/dev/config RABBITMQ_PASSWORD="xxx"
+vault kv put secret/brand/payments/dev/config RABBITMQ_PASSWORD="xxx"
+# ...rotation = 5 operations
+```
+
+**After (single source):**
+```bash
+# One place for all services
+vault kv put secret/brand/shared/dev/config RABBITMQ_PASSWORD="xxx"
+# rotation = 1 operation, auto-synced to all services
+```
 
 ### For DevOps/Infrastructure
 
@@ -105,58 +125,66 @@ secretsProvider:
 
 #### Generated Resources
 
-**Vault provider** creates `VaultStaticSecret`:
+**Vault provider** creates `VaultStaticSecret` for each unique path:
 
 ```yaml
+# Input:
+# secrets:
+#   RABBITMQ_PASSWORD: "brand/shared/{env}/config"
+#   RABBITMQ_USER: "brand/shared/{env}/config"
+#   DB_PASSWORD: "brand/myapp/{env}/config"
+
+# Output: 2 VaultStaticSecrets
+
+# 1. Shared secrets
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
-  name: myapp
+  name: myapp-vault-0
 spec:
   type: kv-v2
   mount: secret
-  path: myns/myapp/dev/database
+  path: brand/shared/dev/config
   vaultAuthRef: vault-auth
   destination:
-    name: myapp
+    name: myapp-vault-0
     create: true
-```
-
-**AWS provider** creates `SecretProviderClass`:
-
-```yaml
-apiVersion: secrets-store.csi.x-k8s.io/v1
-kind: SecretProviderClass
+    transformation:
+      excludeRaw: true
+      includes:
+        - RABBITMQ_PASSWORD
+        - RABBITMQ_USER
+---
+# 2. Service-specific secrets
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
 metadata:
-  name: myapp-aws-secrets
+  name: myapp-vault-1
 spec:
-  provider: aws
-  secretObjects:
-    - secretName: myapp
-      type: Opaque
-      data:
-        - objectName: "DB_PASSWORD"
-          key: "DB_PASSWORD"
+  type: kv-v2
+  mount: secret
+  path: brand/myapp/dev/config
+  vaultAuthRef: vault-auth
+  destination:
+    name: myapp-vault-1
+    create: true
+    transformation:
+      excludeRaw: true
+      includes:
+        - DB_PASSWORD
 ```
 
-### Migration from Legacy
+**Deployment** automatically references all secrets:
 
-If you're using the old `valult: true` configuration, it will fail with an error.
-
-**Old (deprecated):**
 ```yaml
-valult: true
-secrets:
-  DB_PASSWORD: "/ssm/prod/db/password"
-```
-
-**New:**
-```yaml
-secretsProvider:
-  provider: "vault"  # or "aws"
-
-secrets:
-  DB_PASSWORD: "database"
+spec:
+  containers:
+    - name: myapp
+      envFrom:
+        - secretRef:
+            name: myapp-vault-0  # RABBITMQ_PASSWORD, RABBITMQ_USER
+        - secretRef:
+            name: myapp-vault-1  # DB_PASSWORD
 ```
 
 ---
