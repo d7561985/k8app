@@ -69,13 +69,9 @@ chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 
 {{/*
 Truncate image tag for use in labels (max 63 chars)
-Uses last 10 characters with "..." prefix if tag is too long
+Takes last 63 characters if tag is too long (preserves timestamp suffix)
 */}}
 {{- define "k8app.labelVersion" -}}
 {{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" -}}
-{{- if gt (len $tag) 63 -}}
-{{- printf "...%s" ($tag | trunc -10) -}}
-{{- else -}}
-{{- $tag -}}
-{{- end -}}
+{{- $tag | trunc -63 -}}
 {{- end -}}

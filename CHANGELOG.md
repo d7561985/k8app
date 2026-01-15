@@ -2,10 +2,13 @@
 
 ## app
 
+### 3.9.2
+* **Fix:** Label truncation now uses last 63 characters without prefix (labels must start with alphanumeric)
+
 ### 3.9.1
 * **Long Image Tag Truncation** - Automatic label value truncation for Kubernetes compliance
   * Labels limited to 63 characters per Kubernetes spec
-  * New `k8app.labelVersion` helper truncates long tags to `...{last 10 chars}`
+  * New `k8app.labelVersion` helper truncates long tags to last 63 characters
   * Preserves timestamp suffix which is typically unique and informative
   * Full tag preserved in `image:` and `VERSION` env var
   * Fixes: `metadata.labels: Invalid value: must be no more than 63 characters`
