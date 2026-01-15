@@ -2,6 +2,14 @@
 
 ## app
 
+### 3.9.1
+* **Long Image Tag Truncation** - Automatic label value truncation for Kubernetes compliance
+  * Labels limited to 63 characters per Kubernetes spec
+  * New `k8app.labelVersion` helper truncates long tags to `...{last 10 chars}`
+  * Preserves timestamp suffix which is typically unique and informative
+  * Full tag preserved in `image:` and `VERSION` env var
+  * Fixes: `metadata.labels: Invalid value: must be no more than 63 characters`
+
 ### 3.9.0
 * **Multi-Source Secrets** - Support for multiple Vault paths with shared secrets
   * Explicit paths with `{env}` placeholder: `brand/shared/{env}/config`

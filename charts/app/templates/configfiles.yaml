@@ -7,7 +7,7 @@ metadata:
   namespace: {{ $.Release.Namespace }}
   labels:
     app: {{ $appname }}
-    appver: "{{ $.Values.image.tag }}"
+    appver: {{ include "k8app.labelVersion" $ | quote }}
     chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
     release: "{{ $.Release.Name }}"
     helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
@@ -32,7 +32,7 @@ metadata:
   namespace: {{ $.Release.Namespace }}
   labels:
     app: {{ $appname }}
-    appver: "{{ $.Values.image.tag }}"
+    appver: {{ include "k8app.labelVersion" $ | quote }}
     chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
     release: "{{ $.Release.Name }}"
     helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"

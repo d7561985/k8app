@@ -8,7 +8,7 @@ metadata:
   {{- end }}
   labels:
     app: {{ template "name" . }}
-    appver: "{{ .Values.image.tag }}"
+    appver: {{ include "k8app.labelVersion" . | quote }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
   name: {{ .Values.appName }}

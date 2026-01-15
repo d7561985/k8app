@@ -66,3 +66,16 @@ Common labels
 {{ include "app.selectorLabels" . }}
 chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 {{- end -}}
+
+{{/*
+Truncate image tag for use in labels (max 63 chars)
+Uses last 10 characters with "..." prefix if tag is too long
+*/}}
+{{- define "k8app.labelVersion" -}}
+{{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" -}}
+{{- if gt (len $tag) 63 -}}
+{{- printf "...%s" ($tag | trunc -10) -}}
+{{- else -}}
+{{- $tag -}}
+{{- end -}}
+{{- end -}}
