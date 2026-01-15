@@ -943,6 +943,17 @@ entries:
     version: 0.1.0
   app:
   - apiVersion: v2
+    created: "2026-01-15T21:26:19.297012335Z"
+    description: Deployment for base pinup app
+    digest: 8d9da8b48fcae0556c626ddd43828d16bef5bd35a435dd352944b6a19c224281
+    maintainers:
+    - email: d7561985@gmail.com
+      name: DevOps
+    name: app
+    urls:
+    - https://github.com/d7561985/k8app/releases/download/app-3.9.2/app-3.9.2.tgz
+    version: 3.9.2
+  - apiVersion: v2
     created: "2026-01-15T21:06:32.601963878Z"
     description: Deployment for base pinup app
     digest: e527db4f269482d11d26f0ecdda825872cc10da47e354b3659f491915eac05ff
@@ -1552,4 +1563,4 @@ entries:
     urls:
     - https://github.com/d7561985/k8app/releases/download/tel-0.1.3/tel-0.1.3.tgz
     version: 0.1.3
-generated: "2026-01-15T21:06:32.602536414Z"
+generated: "2026-01-15T21:26:19.29744922Z"
