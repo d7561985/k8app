@@ -86,6 +86,13 @@ spec:
         - name: {{ printf "%s-config" $appname  }}
           configMap:
             name: {{ printf "%s-config" $appname }}
+            {{- if .Values.configfiles.files }}
+            items:
+              {{- range .Values.configfiles.files }}
+              - key: {{ .key }}
+                path: {{ .path }}
+              {{- end }}
+            {{- end }}
         {{- end }}
         {{- range $name, $spec := .Values.extensions }}
         {{- if $spec.configfiles }}
@@ -93,6 +100,13 @@ spec:
         - name: {{ $name }}
           configMap:
             name: {{ $name }}
+            {{- if $spec.configfiles.files }}
+            items:
+              {{- range $spec.configfiles.files }}
+              - key: {{ .key }}
+                path: {{ .path }}
+              {{- end }}
+            {{- end }}
         {{- end }}
         {{- end }}
         {{- /* Shared volumes for main container, initContainers, and extensions */ -}}
@@ -221,9 +235,18 @@ spec:
             mountPath: "/mnt/secrets-store"
           {{- end }}
           {{- if .Values.configfiles }}
+          {{- if .Values.configfiles.files }}
+          {{- range .Values.configfiles.files }}
+          - name: {{ printf "%s-config" $appname }}
+            readOnly: true
+            mountPath: {{ .mountPath | default (printf "%s/%s" $.Values.configfiles.mountPath .path) }}
+            subPath: {{ .path }}
+          {{- end }}
+          {{- else }}
           - name: {{ printf "%s-config" $appname }}
             readOnly: true
             mountPath: {{ .Values.configfiles.mountPath }}
+          {{- end }}
           {{- end }}
           {{- /* Shared volumes mounts */ -}}
           {{- range $name, $spec := .Values.sharedVolumes }}
@@ -420,9 +443,18 @@ spec:
         {{- if or $spec.configfiles $.Values.sharedVolumes }}
         volumeMounts:
           {{- if $spec.configfiles }}
+          {{- if $spec.configfiles.files }}
+          {{- range $spec.configfiles.files }}
+          - name: {{ printf "%s-config" $name }}
+            mountPath: {{ .mountPath | default (printf "%s/%s" $spec.configfiles.mountPath .path) }}
+            subPath: {{ .path }}
+            readOnly: true
+          {{- end }}
+          {{- else }}
           - name: {{ printf "%s-config" $name }}
             mountPath: {{ $spec.configfiles.mountPath }}
             readOnly: true
+          {{- end }}
           {{- end }}
           {{- /* Shared volumes mounts for extensions */ -}}
           {{- range $volName, $volSpec := $.Values.sharedVolumes }}

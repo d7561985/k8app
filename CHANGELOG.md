@@ -2,6 +2,15 @@
 
 ## app
 
+### 3.10.0
+* **ConfigFiles subPath Support** - Mount individual files without overwriting directories
+  * New `configfiles.files` array for per-file mount configuration
+  * Uses Kubernetes `subPath` to inject files into existing directories
+  * Preserves other files in the target directory (from Docker image)
+  * Supports custom `mountPath` per file for different target locations
+  * Works with extensions configfiles
+  * Backward compatible - without `files`, behavior unchanged (mount entire directory)
+
 ### 3.9.2
 * **Fix:** Label truncation now uses last 63 characters without prefix (labels must start with alphanumeric)
 
