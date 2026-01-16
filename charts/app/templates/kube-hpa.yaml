@@ -3,9 +3,10 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .Values.appName }}
-  {{- if .Values.hpa.annotations }}
   annotations:
-    {{ toYaml .Values.hpa.annotations | indent 4 }}
+    argocd.argoproj.io/sync-wave: "2"
+  {{- if .Values.hpa.annotations }}
+    {{ toYaml .Values.hpa.annotations | nindent 4 }}
   {{- end }}
   labels:
     app: {{ template "name" . }}

@@ -16,6 +16,8 @@ metadata:
     {{- with .Values.serviceMonitor.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   selector:
     matchLabels:

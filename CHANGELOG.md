@@ -2,6 +2,17 @@
 
 ## app
 
+### 3.10.1
+* **ArgoCD Sync-Wave Support** - Universal resource ordering for GitOps deployments
+  * Added `argocd.argoproj.io/sync-wave` annotations to all resources
+  * Wave -2: VaultStaticSecret (secrets first)
+  * Wave -1: ConfigMap, configfiles (before deployments)
+  * Wave 0: Deployment, Worker (main application)
+  * Wave 1: Ingress, HTTPRoute, ServiceMonitor (after app ready)
+  * Wave 2: HPA (after deployment stable)
+  * Fixes `MountVolume.SetUp failed: configmap not found` in ArgoCD multi-source apps
+  * Helm hooks preserved for standalone Helm usage
+
 ### 3.10.0
 * **ConfigFiles subPath Support** - Mount individual files without overwriting directories
   * New `configfiles.files` array for per-file mount configuration

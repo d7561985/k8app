@@ -21,8 +21,9 @@ metadata:
     app: {{ $appname }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
-  {{- with .Values.httpRoute.annotations }}
   annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  {{- with .Values.httpRoute.annotations }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:

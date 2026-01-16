@@ -9,14 +9,13 @@ metadata:
     app: {{ template "name" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
-{{- if or .Values.ingress.aliases .Values.ingress.annotations }}
   annotations:
+    argocd.argoproj.io/sync-wave: "1"
 {{- if .Values.ingress.aliases }}
     nginx.ingress.kubernetes.io/server-alias: {{ .Values.ingress.aliases | quote }}
 {{- end }}
 {{- if .Values.ingress.annotations }}
 {{ toYaml .Values.ingress.annotations | indent 4 }}
-{{- end }}
 {{- end }}
 spec:
   {{- if .Values.ingress.className }}

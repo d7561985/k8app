@@ -12,6 +12,7 @@ metadata:
     release: "{{ $.Release.Name }}"
     helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
   annotations:
+    argocd.argoproj.io/sync-wave: "-1"
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "-5"
@@ -37,6 +38,7 @@ metadata:
     release: "{{ $.Release.Name }}"
     helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
   annotations:
+    argocd.argoproj.io/sync-wave: "-1"
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "-5"

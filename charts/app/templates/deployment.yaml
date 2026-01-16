@@ -4,7 +4,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: {{ .Release.Namespace }}
-  annotations: {}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
   labels:
     app: {{ $appname }}
     appver: {{ include "k8app.labelVersion" . | quote }}
