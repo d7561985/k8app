@@ -333,13 +333,13 @@ spec:
     {{- if .Values.commands }}
         command:
         {{- range .Values.commands }}
-          - {{ . }}
+          - {{ . | quote }}
         {{- end }}
     {{- end}}
     {{- if .Values.args }}
         args:
         {{- range .Values.args }}
-          - {{ . }}
+          - {{ . | quote }}
         {{- end }}
     {{- end }}
     {{- range $name, $spec := .Values.extensions }}

@@ -158,11 +158,11 @@ spec:
     {{- end }}
         command:
         {{- range $workerConfig.command }}
-        - {{ . }}
+        - {{ . | quote }}
         {{- end }}
         args:
         {{- range $workerConfig.args }}
-        - {{ . }}
+        - {{ . | quote }}
         {{- end }}
     {{- if $root.Values.nodeSelector }}
       nodeSelector:

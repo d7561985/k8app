@@ -44,11 +44,11 @@ spec:
           - name: "{{ $key }}"
             command:
             {{- range $value.command}}
-            - {{ . }}
+            - {{ . | quote }}
             {{- end }}
             args:
             {{- range $value.args}}
-            - {{ . }}
+            - {{ . | quote }}
             {{- end }}
             {{- if $root.Values.configmap }}
             envFrom:

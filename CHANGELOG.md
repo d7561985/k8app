@@ -2,6 +2,11 @@
 
 ## app
 
+### 3.10.2
+* **Fix:** Numeric values in `commands` and `args` now properly quoted as strings
+  * Fixes Kubernetes validation error when using port numbers in commands
+  * Applied to: deployment, worker, job, cronjob templates
+
 ### 3.10.1
 * **ArgoCD Sync-Wave Support** - Universal resource ordering for GitOps deployments
   * Added `argocd.argoproj.io/sync-wave` annotations to all resources

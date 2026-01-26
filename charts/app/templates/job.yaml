@@ -44,13 +44,13 @@ spec:
     {{- end }}
       containers:
       - name: "{{ $key }}"
-        command: 
+        command:
         {{- range $value.command }}
-        - {{ . }}
+        - {{ . | quote }}
         {{- end }}
         args:
         {{- range $value.args }}
-        - {{ . }}
+        - {{ . | quote }}
         {{- end }}
         {{- if $.Values.configmap }}
         envFrom:
