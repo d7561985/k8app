@@ -89,8 +89,9 @@ spec:
           - name: secrets-store-inline
             mountPath: "/mnt/secrets-store"
           {{- end }}
-        image: {{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}
-        imagePullPolicy: Always
+        {{- $workerImage := $workerConfig.image | default dict }}
+        image: {{ $workerImage.repository | default $root.Values.image.repository }}:{{ $workerImage.tag | default $root.Values.image.tag }}
+        imagePullPolicy: {{ $workerImage.pullPolicy | default "Always" }}
         name: {{ $appname }}-{{ $workerName }}
         resources:
 {{ default $root.Values.resources $workerConfig.resources | toYaml | indent 10 }}

@@ -2,6 +2,12 @@
 
 ## app
 
+### 3.10.4
+* **Feature:** Worker-specific image override
+  * Each worker can now use a different image via `worker.spec.<name>.image`
+  * Supports `repository`, `tag`, and `pullPolicy` overrides
+  * Defaults to main `image` values if not specified
+
 ### 3.10.3
 * **Fix:** Added missing `imagePullSecrets` support to worker.yaml
   * Workers now correctly use private registry credentials
