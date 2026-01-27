@@ -2,6 +2,11 @@
 
 ## app
 
+### 3.10.3
+* **Fix:** Added missing `imagePullSecrets` support to worker.yaml
+  * Workers now correctly use private registry credentials
+  * Supports both new `imagePullSecrets` and legacy `deploySecretHarbor`/`deploySecretNexus`
+
 ### 3.10.2
 * **Fix:** Numeric values in `commands` and `args` now properly quoted as strings
   * Fixes Kubernetes validation error when using port numbers in commands

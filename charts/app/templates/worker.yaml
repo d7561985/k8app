@@ -168,6 +168,15 @@ spec:
       nodeSelector:
 {{ toYaml $root.Values.nodeSelector | indent 8 }}
     {{- end }}
+    {{- /* Image Pull Secrets - New universal approach */ -}}
+    {{- if $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml $root.Values.imagePullSecrets | nindent 8 }}
+    {{- /* Legacy support for deploySecretHarbor/deploySecretNexus */ -}}
+    {{- else if or $root.Values.deploySecretHarbor $root.Values.deploySecretNexus }}
+      imagePullSecrets:
+      - name: regsecret
+    {{- end }}
       restartPolicy: Always
   {{- end -}}
 {{- end -}}
