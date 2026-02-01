@@ -2,7 +2,10 @@
 
 ## app
 
-### 3.10.8
+### 3.10.9
+* **Fix:** Job fails with Vault secrets in ArgoCD
+  * Removed `helm.sh/hook` annotations - ArgoCD ran Job in PreSync before VaultStaticSecret existed
+  * Added `argocd.argoproj.io/sync-wave: "-1"` - Job now runs after VaultStaticSecret (wave -2)
 * **Fix:** Added missing `imagePullSecrets` support to job.yaml
   * Jobs now correctly use private registry credentials
 
