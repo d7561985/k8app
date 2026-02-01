@@ -2,6 +2,12 @@
 
 ## app
 
+### 3.10.5
+* **Fix:** Added Vault secrets provider support to job.yaml and cronjob.yaml
+  * Jobs and CronJobs now correctly receive secrets when using `secretsProvider.provider: vault`
+  * Uses `envFrom` with `secretRef` matching vault-static-secret naming convention
+  * CSI volumes only mounted for AWS provider or legacy mode
+
 ### 3.10.4
 * **Feature:** Worker-specific image override
   * Each worker can now use a different image via `worker.spec.<name>.image`
