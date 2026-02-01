@@ -2,6 +2,12 @@
 
 ## app
 
+### 3.10.6
+* **Fix:** VaultStaticSecret not created by ArgoCD
+  * Removed `helm.sh/hook` annotations that caused ArgoCD to ignore VaultStaticSecret resources
+  * ArgoCD treats helm hooks as excluded from sync manifest
+  * `argocd.argoproj.io/sync-wave: "-2"` ensures VaultStaticSecret is created before Deployment
+
 ### 3.10.5
 * **Fix:** Added Vault secrets provider support to job.yaml and cronjob.yaml
   * Jobs and CronJobs now correctly receive secrets when using `secretsProvider.provider: vault`
