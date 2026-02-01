@@ -2,7 +2,7 @@
 
 ## app
 
-### 3.10.7
+### 3.10.8
 * **Fix:** Added missing `imagePullSecrets` support to job.yaml
   * Jobs now correctly use private registry credentials
 
