@@ -37,7 +37,9 @@ spec:
   {{- if .Values.gateway.parentRefs }}
   parentRefs:
     {{- range .Values.gateway.parentRefs }}
-    - name: {{ .name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .name }}
       {{- with .namespace }}
       namespace: {{ . }}
       {{- end }}
@@ -47,7 +49,9 @@ spec:
     {{- end }}
   {{- else }}
   parentRefs:
-    - name: {{ .Values.gateway.parentRef.name | default "gateway" }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.gateway.parentRef.name | default "gateway" }}
       namespace: {{ .Values.gateway.parentRef.namespace | default .Release.Namespace }}
       sectionName: {{ .Values.gateway.parentRef.sectionName | default "http-app" }}
   {{- end }}
@@ -89,19 +93,22 @@ spec:
       {{- if .backendRefs }}
       backendRefs:
         {{- range .backendRefs }}
-        - name: {{ .name | default (printf "%s-sv" $appname) }}
+        - group: ""
+          kind: Service
+          name: {{ .name | default (printf "%s-sv" $appname) }}
           port: {{ .port | default $servicePort }}
+          weight: {{ .weight | default 1 }}
           {{- with .namespace }}
           namespace: {{ . }}
-          {{- end }}
-          {{- with .weight }}
-          weight: {{ . }}
           {{- end }}
         {{- end }}
       {{- else }}
       backendRefs:
-        - name: {{ $appname }}-sv
+        - group: ""
+          kind: Service
+          name: {{ $appname }}-sv
           port: {{ $servicePort }}
+          weight: 1
       {{- end }}
       {{- with .filters }}
       filters:
@@ -114,7 +121,10 @@ spec:
             type: {{ .Values.gateway.pathType | default "PathPrefix" }}
             value: {{ .Values.gateway.path | default "/" | quote }}
       backendRefs:
-        - name: {{ .Values.gateway.backend.service | default (printf "%s-sv" $appname) }}
+        - group: ""
+          kind: Service
+          name: {{ .Values.gateway.backend.service | default (printf "%s-sv" $appname) }}
           port: {{ .Values.gateway.backend.port | default $servicePort }}
+          weight: 1
     {{- end }}
 {{- end }}

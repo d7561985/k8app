@@ -2,6 +2,12 @@
 
 ## app
 
+### 3.11.1
+* **Fix:** ArgoCD drift on HTTPRoute resources
+  * Added explicit `group`, `kind` fields to `parentRefs` (gateway.networking.k8s.io/Gateway)
+  * Added explicit `group`, `kind`, `weight` fields to `backendRefs` (""/Service/1)
+  * Kubernetes API server adds these defaults automatically, causing ArgoCD OutOfSync
+
 ### 3.11.0
 * **BREAKING CHANGE:** `httpRoute` renamed to `gateway`
   * Migration: replace `httpRoute:` with `gateway:` in values files
