@@ -3,5 +3,5 @@ description: Deployment for base pinup app
 maintainers:
 - email: d7561985@gmail.com
   name: DevOps
-version: 3.10.9
+version: 3.11.0
 apiVersion: v2

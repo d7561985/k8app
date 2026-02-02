@@ -2,6 +2,20 @@
 
 ## app
 
+### 3.11.0
+* **BREAKING CHANGE:** `httpRoute` renamed to `gateway`
+  * Migration: replace `httpRoute:` with `gateway:` in values files
+* **Feature:** Simplified Gateway API configuration (DRY, KISS, YAGNI)
+  * Minimal config: `gateway.enabled: true` + `gateway.hostname` + `gateway.path`
+  * Multiple services can share same hostname with different paths
+  * Auto-derived: `parentRef.namespace` from `Release.Namespace`
+  * Auto-derived: `backendRefs.name` as `{appName}-sv`
+  * Auto-derived: `backendRefs.port` from `service.ports.http.externalPort`
+  * Smart defaults: `parentRef.name: "gateway"`, `parentRef.sectionName: "http-app"`
+  * Smart defaults: `path: "/"`, `pathType: "PathPrefix"`
+  * Full `parentRefs`/`rules` arrays preserved as escape hatch
+  * **79% reduction** in typical configuration
+
 ### 3.10.9
 * **Fix:** Job fails with Vault secrets in ArgoCD
   * Removed `helm.sh/hook` annotations - ArgoCD ran Job in PreSync before VaultStaticSecret existed

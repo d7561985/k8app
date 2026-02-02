@@ -5,6 +5,7 @@ GitOps application optimized for AWS EKS
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Gateway API](#gateway-api)
 - [Secrets](#secrets)
   - [For Developers](#for-developers)
   - [Path Convention](#path-convention)
@@ -13,6 +14,7 @@ GitOps application optimized for AWS EKS
 - [Image Pull Secrets](#image-pull-secrets)
 - [Volume](#volume)
 - [Shared Volumes](#shared-volumes)
+- [In-Memory Cache (Redis)](#in-memory-cache-redis)
 - [ServiceMonitor](#servicemonitor)
 
 ---
@@ -24,6 +26,11 @@ Minimal configuration for a new application:
 ```yaml
 appName: "myapp"
 environment: "dev"
+
+# Expose via Gateway API
+gateway:
+  enabled: true
+  hostname: myapp.example.com
 
 # Environment variables from secrets
 secrets:
@@ -383,9 +390,9 @@ sharedVolumes:
 
 ---
 
-## HTTPRoute (Gateway API)
+## Gateway API
 
-Modern alternative to Ingress. Gateway API is the successor to Ingress API with better expressiveness, header-based routing, traffic splitting, and cross-namespace routing.
+Modern alternative to Ingress. Multiple HTTPRoutes can attach to the same Gateway — each service defines its own path, Gateway merges them automatically.
 
 **Prerequisites:**
 ```bash
@@ -393,52 +400,83 @@ Modern alternative to Ingress. Gateway API is the successor to Ingress API with 
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 ```
 
-### Simple Frontend
+### Simple Frontend (Minimal Config)
 
 ```yaml
-httpRoute:
+gateway:
   enabled: true
-  parentRefs:
-    - name: gateway-prod
-      namespace: gateway-prod
-  hostnames:
-    - app.example.com
+  hostname: site.example.com
 ```
 
-### Path-Based Routing
+That's it! Everything else is auto-derived:
+- `parentRef.name`: `gateway` (platform default)
+- `parentRef.namespace`: from `Release.Namespace`
+- `parentRef.sectionName`: `http-app` (platform default)
+- `path`: `/`
+- `backendRefs.name`: `{appName}-sv`
+- `backendRefs.port`: from `service.ports.http.externalPort`
+
+### Multi-Service Routing (Same Hostname, Different Paths)
+
+Multiple services can share the same hostname. Each service deploys its own HTTPRoute with a different path:
 
 ```yaml
-httpRoute:
+# site/values.yaml (main frontend)
+gateway:
   enabled: true
-  parentRefs:
-    - name: gateway-prod
-      namespace: gateway-prod
+  hostname: site.example.com
+  # path: /  (default)
+
+# api/values.yaml
+gateway:
+  enabled: true
+  hostname: site.example.com
+  path: /api
+
+# bonus/values.yaml
+gateway:
+  enabled: true
+  hostname: site.example.com
+  path: /bonus
+```
+
+**Result:** Gateway merges all routes:
+| Path | Service |
+|------|---------|
+| `/` | site-sv |
+| `/api` | api-sv |
+| `/bonus` | bonus-sv |
+
+### Custom Gateway Reference
+
+```yaml
+gateway:
+  enabled: true
+  hostname: site.example.com
+  parentRef:
+    name: external-gateway
+    namespace: gateway-system
+    sectionName: https
+```
+
+### Multiple Hostnames
+
+```yaml
+gateway:
+  enabled: true
   hostnames:
-    - app.example.com
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /api
-      backendRefs:
-        - name: api-gateway-sv
-          port: 8080
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
+    - site.example.com
+    - www.example.com
 ```
 
 ### Traffic Splitting (Canary)
 
+Use `rules` escape hatch for advanced routing:
+
 ```yaml
-httpRoute:
+gateway:
   enabled: true
-  parentRefs:
-    - name: gateway-prod
-      namespace: gateway-prod
-  hostnames:
-    - app.example.com
+  hostname: app.example.com
   rules:
     - matches:
         - path:
@@ -456,13 +494,9 @@ httpRoute:
 ### Header-Based Routing (A/B Testing)
 
 ```yaml
-httpRoute:
+gateway:
   enabled: true
-  parentRefs:
-    - name: gateway-prod
-      namespace: gateway-prod
-  hostnames:
-    - app.example.com
+  hostname: app.example.com
   rules:
     - matches:
         - path:
@@ -480,10 +514,27 @@ httpRoute:
             value: /
 ```
 
+### Configuration Reference
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `false` | Enable HTTPRoute creation |
+| `hostname` | - | Single hostname (shorthand) |
+| `hostnames` | `[]` | Multiple hostnames |
+| `path` | `/` | Path prefix for this service |
+| `pathType` | `PathPrefix` | `PathPrefix` or `Exact` |
+| `parentRef.name` | `gateway` | Gateway resource name |
+| `parentRef.namespace` | `Release.Namespace` | Gateway namespace |
+| `parentRef.sectionName` | `http-app` | Gateway listener name |
+| `backend.service` | `{appName}-sv` | Backend service name |
+| `backend.port` | `service.ports.http.externalPort` | Backend port |
+| `parentRefs` | `[]` | Advanced: full parentRefs array |
+| `rules` | `[]` | Advanced: full rules array |
+
 **References:**
 - [Gateway API Documentation](https://gateway-api.sigs.k8s.io/)
 - [HTTPRoute API Reference](https://gateway-api.sigs.k8s.io/api-types/httproute/)
-- [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/)
+- [Cross-Namespace Routing](https://gateway-api.sigs.k8s.io/guides/multiple-ns/)
 
 ---
 

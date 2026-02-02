@@ -1,16 +1,23 @@
 {{/*
-Gateway API HTTPRoute - Modern alternative to Ingress
+Gateway API HTTPRoute
 Docs: https://gateway-api.sigs.k8s.io/api-types/httproute/
 
-Requires:
-- Gateway API CRDs: kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
-- A Gateway resource in the cluster
+Multiple HTTPRoutes can attach to the same Gateway.
+Each service defines its own path - Gateway merges them automatically.
+
+Simple mode:
+  gateway:
+    enabled: true
+    hostname: site.example.com
+    path: /api
 */}}
-{{- if and .Values.httpRoute .Values.httpRoute.enabled }}
+{{- if and .Values.gateway .Values.gateway.enabled }}
 {{- $appname := include "name" . -}}
 {{- $servicePort := 80 -}}
+{{- if and .Values.service .Values.service.ports }}
 {{- range $name, $port := .Values.service.ports }}
 {{- $servicePort = $port.externalPort | default 80 -}}
+{{- end }}
 {{- end }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -23,13 +30,13 @@ metadata:
     release: "{{ .Release.Name }}"
   annotations:
     argocd.argoproj.io/sync-wave: "1"
-  {{- with .Values.httpRoute.annotations }}
+  {{- with .Values.gateway.annotations }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.httpRoute.parentRefs }}
+  {{- if .Values.gateway.parentRefs }}
   parentRefs:
-    {{- range .Values.httpRoute.parentRefs }}
+    {{- range .Values.gateway.parentRefs }}
     - name: {{ .name }}
       {{- with .namespace }}
       namespace: {{ . }}
@@ -38,16 +45,24 @@ spec:
       sectionName: {{ . }}
       {{- end }}
     {{- end }}
+  {{- else }}
+  parentRefs:
+    - name: {{ .Values.gateway.parentRef.name | default "gateway" }}
+      namespace: {{ .Values.gateway.parentRef.namespace | default .Release.Namespace }}
+      sectionName: {{ .Values.gateway.parentRef.sectionName | default "http-app" }}
   {{- end }}
-  {{- if .Values.httpRoute.hostnames }}
+  {{- if or .Values.gateway.hostname .Values.gateway.hostnames }}
   hostnames:
-    {{- range .Values.httpRoute.hostnames }}
+    {{- if .Values.gateway.hostname }}
+    - {{ .Values.gateway.hostname | quote }}
+    {{- end }}
+    {{- range .Values.gateway.hostnames }}
     - {{ . | quote }}
     {{- end }}
   {{- end }}
   rules:
-    {{- if .Values.httpRoute.rules }}
-    {{- range .Values.httpRoute.rules }}
+    {{- if .Values.gateway.rules }}
+    {{- range .Values.gateway.rules }}
     - {{- if .matches }}
       matches:
         {{- range .matches }}
@@ -96,10 +111,10 @@ spec:
     {{- else }}
     - matches:
         - path:
-            type: PathPrefix
-            value: "/"
+            type: {{ .Values.gateway.pathType | default "PathPrefix" }}
+            value: {{ .Values.gateway.path | default "/" | quote }}
       backendRefs:
-        - name: {{ $appname }}-sv
-          port: {{ $servicePort }}
+        - name: {{ .Values.gateway.backend.service | default (printf "%s-sv" $appname) }}
+          port: {{ .Values.gateway.backend.port | default $servicePort }}
     {{- end }}
 {{- end }}

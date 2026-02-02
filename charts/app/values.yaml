@@ -138,42 +138,53 @@ ingress:
     #       servicePort: 8889
 
 ## =============================================================================
-## HTTPRoute - Gateway API (modern alternative to Ingress)
+## Gateway API - HTTPRoute Configuration
 ## =============================================================================
-## Gateway API is the successor to Ingress. Provides better expressiveness,
-## header-based routing, traffic splitting, and cross-namespace routing.
-## Requires Gateway API CRDs installed in cluster.
+## Gateway API is the successor to Ingress. Multiple HTTPRoutes can attach
+## to the same Gateway - each service defines its own path, Gateway merges them.
 ## Docs: https://gateway-api.sigs.k8s.io/
+##
+## Simple mode:
+##   gateway:
+##     enabled: true
+##     hostname: site.example.com
+##     path: /api              # Optional, default "/"
+##
+## Multi-service example (each service deploys its own HTTPRoute):
+##   site:    gateway.path: /        → site-sv
+##   api:     gateway.path: /api     → api-sv
+##   bonus:   gateway.path: /bonus   → bonus-sv
 ## =============================================================================
-httpRoute:
+gateway:
   enabled: false
-  # Annotations for the HTTPRoute resource
+
+  # Hostname(s) for this service
+  hostname: ""              # Single hostname
+  hostnames: []             # Multiple hostnames
+
+  # Path matching
+  path: "/"                 # Path prefix for this service
+  pathType: PathPrefix      # PathPrefix or Exact
+
+  # Gateway reference (platform defaults)
+  parentRef:
+    name: gateway           # Gateway resource name
+    namespace: ""           # Default: Release.Namespace
+    sectionName: http-app   # Listener name on Gateway
+
+  # Backend (auto-derived from service)
+  backend:
+    service: ""             # Default: {appName}-sv
+    port: 0                 # Default: service.ports.http.externalPort
+
+  # Annotations for HTTPRoute resource
   annotations: {}
-  # Parent Gateway references (required when enabled)
+
+  # Advanced: full parentRefs array (escape hatch)
   parentRefs: []
-    # - name: gateway-prod
-    #   namespace: gateway-prod
-    #   sectionName: https  # optional: specific listener
-  # Hostnames to match (optional, matches all if empty)
-  hostnames: []
-    # - app.example.com
-    # - www.app.example.com
-  # Routing rules (optional, defaults to catch-all route to this service)
+
+  # Advanced: full rules array (escape hatch for complex routing)
   rules: []
-    # - matches:
-    #     - path:
-    #         type: PathPrefix  # PathPrefix, Exact
-    #         value: /api
-    #       headers:            # optional header matching
-    #         - name: X-Version
-    #           value: beta
-    #       method: GET         # optional method matching
-    #   backendRefs:
-    #     - name: api-service-sv  # defaults to {appname}-sv
-    #       port: 8080            # defaults to service.ports[0].externalPort
-    #       namespace: other-ns   # optional cross-namespace
-    #       weight: 100           # optional for traffic splitting
-    #   filters: []               # optional filters (redirects, headers, etc)
 
 ## =============================================================================
 ## In-Memory Cache (Redis) - Ephemeral cache for your service
