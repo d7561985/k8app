@@ -8,7 +8,8 @@ kind: Job
 metadata:
   namespace: "{{ $.Release.Namespace }}"
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
   labels:
     helm.sh/chart: "{{$.Chart.Name}}-{{$.Chart.Version}}"
     job: "{{ $jobName }}"

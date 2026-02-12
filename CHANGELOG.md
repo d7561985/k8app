@@ -2,6 +2,14 @@
 
 ## app
 
+### 3.11.2
+* **Fix:** Job immutable error in ArgoCD on redeploy
+  * Problem: Kubernetes Job `spec.template` is immutable — cannot update image tag on existing Job
+  * ArgoCD failed with "field is immutable" after first successful deploy
+  * Solution: Added `argocd.argoproj.io/hook: PreSync` and `hook-delete-policy: BeforeHookCreation`
+  * ArgoCD now deletes old Job before creating new one with updated image tag
+  * Standard pattern for migration jobs: https://argo-cd.readthedocs.io/en/stable/user-guide/resource_hooks/
+
 ### 3.11.1
 * **Fix:** ArgoCD drift on HTTPRoute resources
   * Added explicit `group`, `kind` fields to `parentRefs` (gateway.networking.k8s.io/Gateway)
