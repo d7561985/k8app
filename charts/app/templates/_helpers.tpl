@@ -82,5 +82,5 @@ Input: dict with "value" (from configmap value), "root" (root context)
 Example: "https://api.{env}.example.com" with environment=dev → "https://api.dev.example.com"
 */}}
 {{- define "configmap.resolveValue" -}}
-{{- .value | replace "{env}" .root.Values.environment -}}
+{{- .value | toString | replace "{env}" .root.Values.environment -}}
 {{- end -}}

@@ -2,6 +2,13 @@
 
 ## app
 
+### 3.12.1
+* **Bugfix:** Fix `configmap.resolveValue` crash on non-string values (int, float, bool)
+  * YAML parses unquoted values like `SERVER_PORT: 8085` as float64, `DB_USE_BATCH: false` as bool
+  * `replace` requires string input — added `toString` before `replace`
+  * K8s ConfigMap `data` is `map[string]string` — all values are strings regardless
+  * Affected 10 services in dev environment
+
 ### 3.12.0
 * **Feature:** Added `{env}` placeholder support for ConfigMap values
   * Use `{env}` in configmap values for environment-specific substitution
