@@ -198,14 +198,23 @@ spec:
 
 ## ConfigMap
 
-Define non-sensitive environment variables:
+Define non-sensitive environment variables. Use `{env}` placeholder for environment substitution:
 
 ```yaml
 configmap:
+  # Static values
   LOG_LEVEL: "info"
-  API_URL: "https://api.example.com"
   FEATURE_FLAG: "true"
+  
+  # Dynamic values with {env} substitution
+  API_URL: "https://api.{env}.example.com"      # → api.dev.example.com
+  REDIS_URL: "redis.{env}.internal:6379"        # → redis.dev.internal:6379
+  DATABASE_NAME: "myapp_{env}"                  # → myapp_dev
 ```
+
+The chart automatically:
+1. Replaces `{env}` with your environment (dev/staging/prod)
+2. Injects all values as environment variables via `envFrom`
 
 All keys are automatically injected as environment variables.
 

@@ -386,6 +386,9 @@ configmap: {}
 # Example (same simple interface as secrets):
 #   LOG_LEVEL: "debug"
 #   API_URL: "https://api.example.com"
+#   # Use {env} placeholder for environment substitution:
+#   API_BASE_URL: "https://api.{env}.example.com"  # → api.dev.example.com
+#   REDIS_URL: "redis.{env}.internal:6379"         # → redis.dev.internal:6379
 
 ## Legacy parameters (DEPRECATED - do not use)
 vaultProjectName: ""

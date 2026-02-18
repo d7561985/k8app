@@ -75,3 +75,12 @@ Takes last 63 characters if tag is too long (preserves timestamp suffix)
 {{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" -}}
 {{- $tag | trunc -63 -}}
 {{- end -}}
+
+{{/*
+Resolve {env} placeholder in configmap value
+Input: dict with "value" (from configmap value), "root" (root context)
+Example: "https://api.{env}.example.com" with environment=dev → "https://api.dev.example.com"
+*/}}
+{{- define "configmap.resolveValue" -}}
+{{- .value | replace "{env}" .root.Values.environment -}}
+{{- end -}}

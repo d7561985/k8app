@@ -2,6 +2,14 @@
 
 ## app
 
+### 3.12.0
+* **Feature:** Added `{env}` placeholder support for ConfigMap values
+  * Use `{env}` in configmap values for environment-specific substitution
+  * Example: `API_URL: "https://api.{env}.example.com"` → `https://api.dev.example.com`
+  * Same pattern as secrets but with dedicated `configmap.resolveValue` helper
+  * Environment substitution happens at ConfigMap generation time
+  * All deployment templates (deployment, worker, job, cronjob) use the resolved values automatically
+
 ### 3.11.2
 * **Fix:** Job immutable error in ArgoCD on redeploy
   * Problem: Kubernetes Job `spec.template` is immutable — cannot update image tag on existing Job
