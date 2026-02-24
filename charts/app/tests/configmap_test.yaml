@@ -1,0 +1,25 @@
+suite: ConfigMap
+templates:
+  - configmap.yaml
+values:
+  - ../values.yaml
+
+tests:
+  - it: should create configmap with env vars
+    set:
+      appName: myapp
+      configmap:
+        LOG_LEVEL: info
+        API_URL: https://api.example.com
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: myapp
+      - equal:
+          path: data.LOG_LEVEL
+          value: info
+      - equal:
+          path: data.API_URL
+          value: https://api.example.com

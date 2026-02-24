@@ -1,0 +1,77 @@
+suite: CronJob
+templates:
+  - cronjob.yaml
+values:
+  - ../values.yaml
+
+tests:
+  - it: should not render when cronjob is disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create cronjob with schedule
+    set:
+      appName: myapp
+      cronjob:
+        enabled: true
+        spec:
+          cleanup:
+            schedule: "0 2 * * *"
+            command: ["./cleanup"]
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: spec.schedule
+          value: "0 2 * * *"
+
+  - it: should set concurrency policy
+    set:
+      appName: myapp
+      cronjob:
+        enabled: true
+        spec:
+          report:
+            schedule: "0 6 * * 1"
+            command: ["./report"]
+            concurrencyPolicy: Forbid
+    asserts:
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+
+  - it: should support per-spec resources
+    set:
+      appName: myapp
+      cronjob:
+        enabled: true
+        spec:
+          heavy-job:
+            schedule: "0 3 * * *"
+            command: ["./heavy"]
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.requests.cpu
+          value: 500m
+
+  - it: should include image pull secrets
+    set:
+      appName: myapp
+      imagePullSecrets:
+        - name: regsecret
+      cronjob:
+        enabled: true
+        spec:
+          default:
+            schedule: "0 * * * *"
+            command: ["./run"]
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.imagePullSecrets
+          content:
+            name: regsecret

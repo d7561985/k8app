@@ -1,0 +1,105 @@
+{{- $appname := printf "%s" (include "name" .) -}}
+1. Get the application URL by running these commands:
+{{- if .Values.gateway.enabled }}
+  Gateway API:
+    http{{ if .Values.gateway.tls }}s{{ end }}://{{ .Values.gateway.hostname }}/
+{{- else if .Values.ingress.enabled }}
+  Ingress:
+    {{- range $host := .Values.ingress.hosts }}
+    http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}/
+    {{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ $appname }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ $appname }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ $appname }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ index .Values.service.ports 0 "port" }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app={{ $appname }},release={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Application Status:
+{{- if .Values.deployment.enabled }}
+  Deployment: {{ $appname }} ({{ default 3 .Values.replicas }} replicas)
+{{- end }}
+{{- if .Values.worker.enabled }}
+  Workers: {{ len .Values.worker.spec }} worker type(s) configured
+{{- end }}
+{{- if .Values.cronjob.enabled }}
+  CronJobs: {{ len .Values.cronjob.spec }} scheduled job(s) configured
+{{- end }}
+{{- if .Values.job.enabled }}
+  Jobs: {{ len .Values.job.spec }} one-time job(s) configured
+{{- end }}
+
+3. Monitoring:
+{{- if .Values.serviceMonitor.enabled }}
+  ✓ Prometheus ServiceMonitor enabled
+{{- end }}
+{{- if .Values.cache.enabled }}
+  ✓ Redis cache enabled ({{ $appname }}-cache-sv:{{ .Values.cache.port }})
+{{- end }}
+{{- if .Values.hpa.enabled }}
+  ✓ Horizontal Pod Autoscaler enabled ({{ .Values.hpa.minReplicas }}-{{ .Values.hpa.maxReplicas }} replicas)
+{{- end }}
+{{- if .Values.pdb.enabled }}
+  ✓ Pod Disruption Budget enabled
+{{- end }}
+
+4. Security & Access:
+{{- if .Values.rbac.create }}
+  ✓ RBAC enabled (ServiceAccount: {{ .Release.Namespace }}-{{ $appname }})
+{{- end }}
+{{- if .Values.secrets }}
+  ✓ Secrets configured ({{ len .Values.secrets }} secret(s))
+{{- end }}
+{{- if .Values.imagePullSecrets }}
+  ✓ Image pull secrets configured
+{{- end }}
+
+5. Storage:
+{{- if .Values.volume.enabled }}
+  ✓ Persistent Volume enabled ({{ .Values.volume.resources.requests.storage }})
+{{- end }}
+{{- if .Values.configfiles }}
+  ✓ Config files mounted at {{ .Values.configfiles.mountPath }}
+{{- end }}
+{{- if .Values.sharedVolumes }}
+  ✓ Shared volumes: {{ len .Values.sharedVolumes }} volume(s)
+{{- end }}
+
+6. Useful Commands:
+  # Check pod status
+  kubectl get pods -n {{ .Release.Namespace }} -l app={{ $appname }}
+  
+  # View logs
+  kubectl logs -n {{ .Release.Namespace }} deployment/{{ $appname }} -f
+  
+  # Check service
+  kubectl get svc -n {{ .Release.Namespace }} {{ $appname }}
+  
+{{- if .Values.worker.enabled }}
+  # Check workers
+  kubectl get pods -n {{ .Release.Namespace }} -l type=worker
+{{- end }}
+  
+  # Scale deployment
+  kubectl scale deployment {{ $appname }} --replicas=5 -n {{ .Release.Namespace }}
+
+{{- if .Values.gateway.enabled }}
+
+7. Gateway API:
+  Gateway: {{ .Values.gateway.hostname }}
+  Namespace: {{ .Release.Namespace }}
+  {{- if .Values.gateway.tls }}
+  TLS: Enabled
+  {{- end }}
+{{- end }}
+
+For more information, visit: https://github.com/your-org/k8app/tree/main/charts/app

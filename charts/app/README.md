@@ -762,3 +762,561 @@ serviceMonitor:
 
 Both approaches can coexist. ServiceMonitor is preferred for Prometheus Operator deployments.
 
+---
+
+## Worker
+
+Deploy background worker processes alongside your main application.
+
+### Basic Configuration
+
+```yaml
+worker:
+  enabled: true
+  spec:
+    default:
+      replicas: 2
+      command: ["python", "worker.py"]
+      args: ["--queue", "default"]
+    priority:
+      replicas: 1
+      command: ["python", "worker.py"]  
+      args: ["--queue", "priority"]
+```
+
+### Advanced Configuration
+
+Workers support all the same features as the main deployment:
+
+```yaml
+worker:
+  enabled: true
+  spec:
+    background:
+      replicas: 3
+      command: ["./worker"]
+      args: ["--type", "background"]
+      resources:
+        limits:
+          memory: "512Mi"
+          cpu: "200m"
+        requests:
+          memory: "256Mi"  
+          cpu: "100m"
+      image:
+        repository: "myorg/worker"
+        tag: "v1.2.3"
+      readinessProbe:
+        httpGet:
+          path: "/health"
+          port: 8080
+        initialDelaySeconds: 10
+      livenessProbe:
+        httpGet:
+          path: "/health"
+          port: 8080
+        initialDelaySeconds: 30
+```
+
+Workers automatically inherit:
+- Environment variables from secrets and configmap
+- Volumes and volume mounts (including configfiles and shared volumes)
+- Service account configuration
+- Node selectors and tolerations
+- Image pull secrets
+- Extension/sidecar containers
+
+---
+
+## Job
+
+Run one-time jobs for database migrations, data imports, etc.
+
+### Basic Configuration
+
+```yaml
+job:
+  enabled: true
+  spec:
+    migrate:
+      command: ["python", "manage.py", "migrate"]
+      backoffLimit: 2
+    seed-data:
+      command: ["python", "manage.py", "loaddata", "initial.json"]
+      backoffLimit: 1
+      resources:
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+```
+
+### Full Configuration
+
+```yaml
+job:
+  enabled: true
+  spec:
+    data-import:
+      command: ["./import-script.sh"]
+      args: ["--batch-size", "1000"]
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      ttlSecondsAfterFinished: 86400  # Clean up after 24h
+      resources:
+        limits:
+          memory: "2Gi"
+          cpu: "1000m"
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+      env:
+        IMPORT_MODE: "production"
+        BATCH_SIZE: "1000"
+```
+
+Jobs automatically inherit:
+- Environment variables from secrets and configmap
+- Volumes and volume mounts (including configfiles)
+- Service account configuration
+- Node selectors and tolerations
+- Image pull secrets
+
+---
+
+## CronJob
+
+Schedule recurring tasks like backups, cleanup jobs, reports, etc.
+
+### Basic Configuration
+
+```yaml
+cronjob:
+  enabled: true
+  spec:
+    backup:
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      command: ["./backup.sh"]
+    cleanup:
+      schedule: "0 4 * * 0"  # Weekly on Sunday at 4 AM
+      command: ["./cleanup.sh"]
+      args: ["--days", "30"]
+```
+
+### Advanced Configuration
+
+```yaml
+cronjob:
+  enabled: true
+  spec:
+    report-generator:
+      schedule: "0 9 * * 1"  # Weekly on Monday at 9 AM
+      command: ["python", "generate_report.py"]
+      args: ["--format", "pdf", "--email"]
+      resources:
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+      concurrencyPolicy: "Forbid"
+      successfulJobsHistoryLimit: 5
+      failedJobsHistoryLimit: 3
+      startingDeadlineSeconds: 600  # 10 minutes
+      activeDeadlineSeconds: 1800   # 30 minutes
+      suspend: false
+```
+
+CronJobs automatically inherit:
+- Environment variables from secrets and configmap
+- Volumes and volume mounts (including configfiles)
+- Service account configuration  
+- Node selectors and tolerations
+- Image pull secrets
+
+---
+
+## HPA (Horizontal Pod Autoscaler)
+
+Automatically scale your application based on CPU, memory, or custom metrics.
+
+### Basic Configuration
+
+```yaml
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+```
+
+### Advanced Configuration
+
+```yaml
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent  
+        value: 100
+        periodSeconds: 15
+```
+
+### With Custom Metrics
+
+```yaml
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 15
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: queue_length
+      target:
+        type: AverageValue
+        averageValue: "50"
+```
+
+**Note:** When HPA is enabled, the `replicas` field in deployment is ignored.
+
+---
+
+## PDB (Pod Disruption Budget)
+
+Ensure high availability during node maintenance and cluster updates.
+
+### Basic Configuration
+
+```yaml
+pdb:
+  enabled: true
+  minAvailable: 1
+```
+
+### Advanced Configuration
+
+```yaml
+pdb:
+  enabled: true
+  minAvailable: 2                # Keep at least 2 pods available
+  # OR
+  maxUnavailable: "25%"          # Allow max 25% of pods to be unavailable
+  
+  # Custom API version (defaults to policy/v1)
+  apiVersion: "policy/v1"
+  
+  # Custom annotations
+  annotations:
+    description: "Ensure high availability during deployments"
+```
+
+**Best Practices:**
+- Use `minAvailable` for critical services
+- Use `maxUnavailable` as percentage for scalable services
+- Don't set both `minAvailable` and `maxUnavailable`
+
+---
+
+## Alerting Rules
+
+Define Prometheus alerting rules specific to your application.
+
+### Basic Configuration
+
+```yaml
+alertRules:
+  enabled: true
+  groups:
+    - name: myapp.rules
+      rules:
+        - alert: HighErrorRate
+          expr: rate(http_requests_total{job="myapp",status=~"5.."}[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ $value }} req/sec"
+```
+
+### Advanced Configuration
+
+```yaml
+alertRules:
+  enabled: true
+  additionalLabels:
+    team: backend
+    environment: production
+  groups:
+    - name: myapp.performance
+      interval: 30s
+      rules:
+        - alert: HighLatency
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="myapp"}[5m])) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+            service: myapp
+          annotations:
+            summary: "High latency on {{ $labels.instance }}"
+            description: "95th percentile latency is {{ $value }}s"
+            runbook_url: "https://docs.company.com/runbooks/high-latency"
+            
+        - alert: HighMemoryUsage
+          expr: (container_memory_usage_bytes{container="myapp"} / container_spec_memory_limit_bytes{container="myapp"}) * 100 > 85
+          for: 10m
+          labels:
+            severity: critical
+            service: myapp
+          annotations:
+            summary: "High memory usage"
+            description: "Memory usage is {{ $value }}% of limit"
+```
+
+---
+
+## RBAC
+
+Configure Role-Based Access Control for your application.
+
+### Basic Configuration
+
+```yaml
+rbac:
+  create: true  # Creates ServiceAccount, Role, and RoleBinding
+```
+
+### Advanced Configuration
+
+```yaml
+rbac:
+  create: true
+  serviceAccountName: "custom-service-account"  # Use existing SA instead
+  
+  # Custom annotations for ServiceAccount
+  serviceAccountAnnotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT:role/myapp-role"
+  
+  # Additional rules for the Role
+  rules:
+    - apiGroups: [""]
+      resources: ["secrets", "configmaps"]
+      verbs: ["get", "list"]
+    - apiGroups: ["apps"]
+      resources: ["deployments"]
+      verbs: ["get", "list", "patch"]
+    
+  # Additional ClusterRole (optional)
+  clusterRole:
+    create: true
+    rules:
+      - apiGroups: [""]
+        resources: ["nodes"]
+        verbs: ["get", "list"]
+```
+
+### AWS EKS IAM Integration
+
+```yaml
+rbac:
+  create: true
+  serviceAccountAnnotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/myapp-role"
+    
+# This allows your pods to assume AWS IAM roles
+```
+
+---
+
+## ConfigFiles
+
+Mount configuration files from ConfigMaps into your containers.
+
+### Basic Configuration
+
+```yaml
+configfiles:
+  enabled: true
+  mountPath: "/etc/config"
+  data:
+    app.yaml: |
+      database:
+        host: postgres.example.com
+        port: 5432
+      logging:
+        level: info
+    nginx.conf: |
+      server {
+        listen 80;
+        location / {
+          proxy_pass http://localhost:8080;
+        }
+      }
+```
+
+### Advanced Configuration
+
+```yaml
+configfiles:
+  enabled: true
+  mountPath: "/etc/myapp"
+  
+  # Fine-grained file mounting
+  files:
+    - key: "database.yaml"
+      path: "db/config.yaml" 
+      mountPath: "/etc/myapp/database.yaml"  # Override per-file
+    - key: "redis.conf"
+      path: "cache/redis.conf"
+  
+  # File contents
+  data:
+    database.yaml: |
+      host: {env}-db.example.com  # {env} replaced with environment
+      port: 5432
+      ssl: true
+    redis.conf: |
+      maxmemory 256mb
+      maxmemory-policy allkeys-lru
+      
+  # Set custom ConfigMap name
+  configMapName: "myapp-configs"
+```
+
+ConfigFiles are automatically available in:
+- Main deployment containers
+- Worker containers  
+- Job containers
+- CronJob containers
+- InitContainer containers
+
+---
+
+## Extensions/Sidecars
+
+Add sidecar containers to your pods for logging, monitoring, proxies, etc.
+
+### Basic Configuration
+
+```yaml
+extensions:
+  nginx-proxy:
+    image:
+      repository: nginx
+      name: nginx
+      tag: "1.21-alpine"
+    command: ["nginx", "-g", "daemon off;"]
+    
+  log-shipper:
+    image:
+      repository: fluent
+      name: fluent-bit  
+      tag: "1.9"
+    env:
+      OUTPUT_HOST: "elasticsearch.logging.svc.cluster.local"
+      OUTPUT_PORT: "9200"
+```
+
+### Advanced Configuration
+
+```yaml
+extensions:
+  istio-proxy:
+    image:
+      repository: docker.io/istio
+      name: proxyv2
+      tag: "1.15.0"
+    command: ["istio-proxy"]
+    args: ["proxy", "sidecar"]
+    resources:
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+    env:
+      PILOT_AGENT_PORT: "15020"
+      ISTIO_BOOTSTRAP: "/etc/istio-proxy/bootstrap.yaml"
+    volumeMounts:
+      - name: istio-proxy-config
+        mountPath: /etc/istio-proxy
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 30
+    readinessProbe:
+      httpGet:
+        path: /healthz/ready  
+        port: 15021
+      initialDelaySeconds: 10
+      
+  vault-agent:
+    image:
+      repository: vault
+      name: vault
+      tag: "1.12"
+    command: ["vault", "agent"]
+    args: ["-config", "/vault/config/agent.hcl"]
+    configfiles:
+      enabled: true
+      mountPath: "/vault/config"
+      data:
+        agent.hcl: |
+          vault {
+            address = "https://vault.company.com"
+          }
+          auth {
+            method "kubernetes" {
+              config = {
+                role = "myapp"
+              }
+            }
+          }
+```
+
+### Extension Features
+
+Extensions support most container features:
+- Custom images, commands, and arguments
+- Resource limits and requests
+- Environment variables
+- Health checks (liveness/readiness probes)
+- Config files (separate ConfigMap per extension)
+- Volume mounts from shared volumes
+
+Extensions are available in:
+- Main deployment pods
+- Worker pods (when `extensions` is configured for workers)
+
+### Use Cases
+
+Common sidecar patterns:
+- **Service Mesh:** Istio proxy, Linkerd proxy
+- **Logging:** Fluentd, Fluent Bit, Filebeat
+- **Monitoring:** Prometheus exporters, StatsD
+- **Security:** Vault agent, secret rotation
+- **Networking:** Ambassador, Nginx proxy
+- **Caching:** Redis sidecar, Memcached
+

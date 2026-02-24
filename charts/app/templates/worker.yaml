@@ -40,7 +40,11 @@ spec:
         type: worker
         worker-name: {{ $appname }}-{{ $workerName }}
     spec:
+    {{- if $root.Values.serviceAccountName }}
       serviceAccountName: {{ $root.Values.serviceAccountName}}
+    {{- else if $root.Values.rbac.create }}
+      serviceAccountName: {{ $root.Release.Namespace }}-{{ $appname }}
+    {{- end }}
       volumes:
         {{- if $root.Values.volume.enabled }}
         - name: {{template "persistantClaim" $root }}
@@ -48,36 +52,48 @@ spec:
             claimName: {{template "persistantClaim" $root }}
         {{- end -}}
         {{- /* CSI volume only for AWS provider or legacy mode (not for Vault) */ -}}
-        {{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
-        - name: secrets-store-inline
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ $appname }}-aws-secrets
+        {{- include "k8app.secretVolumes" (dict "root" $root "appname" $appname) | nindent 8 }}
+        {{- if $root.Values.configfiles }}
+        - name: {{ printf "%s-config" $appname  }}
+          configMap:
+            name: {{ printf "%s-config" $appname }}
+            {{- if $root.Values.configfiles.files }}
+            items:
+              {{- range $root.Values.configfiles.files }}
+              - key: {{ .key }}
+                path: {{ .path }}
+              {{- end }}
+            {{- end }}
+        {{- end }}
+        {{- /* Shared volumes for main container, initContainers, and extensions */ -}}
+        {{- range $name, $spec := $root.Values.sharedVolumes }}
+        - name: {{ $name }}
+          {{- if eq $spec.type "emptyDir" }}
+          emptyDir:
+            {{- with $spec.medium }}
+            medium: {{ . }}
+            {{- end }}
+            {{- with $spec.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- end }}
+          {{- else if eq $spec.type "configMap" }}
+          configMap:
+            name: {{ $spec.name | default (printf "%s-%s" $appname $name) }}
+          {{- else if eq $spec.type "secret" }}
+          secret:
+            secretName: {{ $spec.name | default (printf "%s-%s" $appname $name) }}
+          {{- end }}
         {{- end }}
       containers:
       - env:
         - name: BUILD_ID
           value: {{ $root.Values.buildId | quote | default "NULL" }}
+    {{- if $root.Values.cache.enabled }}
+        - name: REDIS_URL
+          value: "redis://{{ $appname }}-cache-sv:{{ $root.Values.cache.port }}"
+    {{- end }}
     {{- if or $root.Values.secrets $root.Values.configmap }}
-        envFrom:
-        {{- if $root.Values.configmap }}
-        - configMapRef:
-            name: {{ $appname }}
-        {{- end }}
-        {{- if and $root.Values.secrets (eq (include "secrets.isVaultEnabled" $root) "true") }}
-        {{- $secretsByPath := dict -}}
-        {{- range $envVar, $pathTemplate := $root.Values.secrets -}}
-        {{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $root) -}}
-        {{- $_ := set $secretsByPath $resolvedPath true -}}
-        {{- end -}}
-        {{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
-        {{- range $pathIndex, $path := $sortedPaths }}
-        - secretRef:
-            name: {{ $appname }}-vault-{{ $pathIndex }}
-        {{- end }}
-        {{- end }}
+        {{- include "k8app.envFrom" (dict "root" $root "appname" $appname) | nindent 8 }}
     {{- end }}
         volumeMounts:
           {{- if $root.Values.volume.enabled }}
@@ -85,9 +101,30 @@ spec:
             mountPath: {{ $root.Values.volume.mount.path }}
           {{- end -}}
           {{- /* CSI volume mount only for AWS provider or legacy mode */ -}}
-          {{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
-          - name: secrets-store-inline
-            mountPath: "/mnt/secrets-store"
+          {{- include "k8app.secretVolumeMounts" (dict "root" $root) | nindent 10 }}
+          {{- if $root.Values.configfiles }}
+          {{- if $root.Values.configfiles.files }}
+          {{- range $root.Values.configfiles.files }}
+          - name: {{ printf "%s-config" $appname }}
+            readOnly: true
+            mountPath: {{ .mountPath | default (printf "%s/%s" $root.Values.configfiles.mountPath .path) }}
+            subPath: {{ .path }}
+          {{- end }}
+          {{- else }}
+          - name: {{ printf "%s-config" $appname }}
+            readOnly: true
+            mountPath: {{ $root.Values.configfiles.mountPath }}
+          {{- end }}
+          {{- end }}
+          {{- /* Shared volumes mounts */ -}}
+          {{- range $name, $spec := $root.Values.sharedVolumes }}
+          {{- if $spec.mountPath }}
+          - name: {{ $name }}
+            mountPath: {{ $spec.mountPath }}
+            {{- if $spec.readOnly }}
+            readOnly: {{ $spec.readOnly }}
+            {{- end }}
+          {{- end }}
           {{- end }}
         {{- $workerImage := $workerConfig.image | default dict }}
         image: {{ $workerImage.repository | default $root.Values.image.repository }}:{{ $workerImage.tag | default $root.Values.image.tag }}
@@ -165,19 +202,33 @@ spec:
         {{- range $workerConfig.args }}
         - {{ . | quote }}
         {{- end }}
+    {{- range $name, $spec := $root.Values.extensions }}
+      {{- $extensionName := printf "%s-%s" $appname $name }}
+      - name: {{ $extensionName }}
+        image: "{{ $spec.image.repository | default "" }}{{- if and $spec.image.repository $spec.image.name -}}/{{- end -}}{{ $spec.image.name | default "" }}:{{ $spec.image.tag | default "" }}"
+        {{- if $spec.command }}
+        command:
+          {{- toYaml $spec.command | nindent 10 }}
+        {{- end }}
+        {{- if $spec.args }}
+        args:
+          {{- toYaml $spec.args | nindent 10 }}
+        {{- end }}
+        {{- if $spec.resources }}
+        resources:
+          {{- toYaml $spec.resources | nindent 10 }}
+        {{- end }}
+    {{- end }}
     {{- if $root.Values.nodeSelector }}
       nodeSelector:
 {{ toYaml $root.Values.nodeSelector | indent 8 }}
     {{- end }}
-    {{- /* Image Pull Secrets - New universal approach */ -}}
-    {{- if $root.Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml $root.Values.imagePullSecrets | nindent 8 }}
-    {{- /* Legacy support for deploySecretHarbor/deploySecretNexus */ -}}
-    {{- else if or $root.Values.deploySecretHarbor $root.Values.deploySecretNexus }}
-      imagePullSecrets:
-      - name: regsecret
+    {{- with $root.Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
     {{- end }}
+    {{- /* Image Pull Secrets - New universal approach */ -}}
+      {{- include "k8app.imagePullSecrets" (dict "root" $root) | nindent 6 }}
       restartPolicy: Always
   {{- end -}}
 {{- end -}}

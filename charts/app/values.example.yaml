@@ -1,5 +1,5 @@
 # =============================================================================
-# k8app v3.8.0 - Full Configuration Reference
+# k8app v3.12.1 - Full Configuration Reference
 # =============================================================================
 # This file shows ALL available options for DevOps/Infrastructure teams.
 #
@@ -85,9 +85,9 @@ configmap:
 # Secrets (Vault or AWS)
 # -----------------------------------------------------------------------------
 secrets:
-  DB_PASSWORD: "database"
-  DB_USER: "database"
-  API_KEY: "external/api"
+  DB_PASSWORD: "brand/myapp/{env}/config"
+  DB_USER: "brand/myapp/{env}/config"
+  API_KEY: "brand/myapp/{env}/config"
 
 secretsProvider:
   provider: "vault"  # vault | aws | none

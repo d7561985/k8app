@@ -1,5 +1,5 @@
 {{- if .Values.pdb.enabled -}}
-apiVersion: {{ default "policy/v1beta1" .Values.pdb.apiVersion }}
+apiVersion: {{ default "policy/v1" .Values.pdb.apiVersion }}
 kind: PodDisruptionBudget
 metadata:
   namespace: {{ .Release.Namespace }}

@@ -1,0 +1,38 @@
+suite: HorizontalPodAutoscaler
+templates:
+  - kube-hpa.yaml
+values:
+  - ../values.yaml
+
+tests:
+  - it: should not render when hpa is disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create HPA with cpu target
+    set:
+      appName: myapp
+      hpa:
+        enabled: true
+        maxReplicas: 10
+        cpu: 70
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+
+  - it: should use replicas as minReplicas
+    set:
+      appName: myapp
+      replicas: 3
+      hpa:
+        enabled: true
+        maxReplicas: 10
+        cpu: 70
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 3

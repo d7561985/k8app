@@ -1,0 +1,67 @@
+suite: Cache (Redis)
+values:
+  - ../values.yaml
+set:
+  service:
+    enabled: true
+    type: ClusterIP
+    ports:
+      http:
+        externalPort: 80
+        internalPort: 80
+        protocol: TCP
+
+tests:
+  - it: should not render configmap when cache is disabled
+    templates:
+      - cache-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render deployment when cache is disabled
+    templates:
+      - cache-deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create cache configmap
+    templates:
+      - cache-configmap.yaml
+    set:
+      appName: myapp
+      cache:
+        enabled: true
+        maxmemory: 200mb
+        maxmemoryPolicy: allkeys-lru
+    asserts:
+      - isKind:
+          of: ConfigMap
+
+  - it: should create cache deployment
+    templates:
+      - cache-deployment.yaml
+    set:
+      appName: myapp
+      cache:
+        enabled: true
+        maxmemory: 200mb
+        maxmemoryPolicy: allkeys-lru
+    asserts:
+      - isKind:
+          of: Deployment
+
+  - it: should create cache service
+    templates:
+      - cache-service.yaml
+    set:
+      appName: myapp
+      cache:
+        enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: myapp-cache-sv

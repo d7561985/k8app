@@ -34,12 +34,20 @@ spec:
         {{- /* CSI volume only for AWS provider or legacy mode (not for Vault) */ -}}
         {{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
           volumes:
-            - name: secrets-store-inline
-              csi:
-                driver: secrets-store.csi.k8s.io
-                readOnly: true
-                volumeAttributes:
-                  secretProviderClass: {{ $appname }}-aws-secrets
+            {{- include "k8app.secretVolumes" (dict "root" $root "appname" $appname) | nindent 12 }}
+        {{- end }}
+        {{- if $root.Values.configfiles }}
+          volumes:
+            - name: {{ printf "%s-config" $appname  }}
+              configMap:
+                name: {{ printf "%s-config" $appname }}
+                {{- if $root.Values.configfiles.files }}
+                items:
+                  {{- range $root.Values.configfiles.files }}
+                  - key: {{ .key }}
+                    path: {{ .path }}
+                  {{- end }}
+                {{- end }}
         {{- end }}
           containers:
           - name: "{{ $key }}"
@@ -51,25 +59,7 @@ spec:
             {{- range $value.args}}
             - {{ . | quote }}
             {{- end }}
-        {{- if or $root.Values.secrets $root.Values.configmap }}
-            envFrom:
-            {{- if $root.Values.configmap }}
-            - configMapRef:
-                name: "{{ $appname }}"
-            {{- end }}
-            {{- if and $root.Values.secrets (eq (include "secrets.isVaultEnabled" $root) "true") }}
-            {{- $secretsByPath := dict -}}
-            {{- range $envVar, $pathTemplate := $root.Values.secrets -}}
-            {{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $root) -}}
-            {{- $_ := set $secretsByPath $resolvedPath true -}}
-            {{- end -}}
-            {{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
-            {{- range $pathIndex, $path := $sortedPaths }}
-            - secretRef:
-                name: {{ $appname }}-vault-{{ $pathIndex }}
-            {{- end }}
-            {{- end }}
-        {{- end }}
+            {{- include "k8app.envFrom" (dict "root" $root "appname" $appname) | nindent 12 }}
             env:
             - name: BUILD_ID
               value: {{ $root.Values.buildId | quote | default "000" }}
@@ -77,7 +67,7 @@ spec:
               value: {{ $root.Values.environment | quote }}
             - name: SENTRY_RELEASE
               value: {{ $root.Values.image.tag | quote }}
-            {{- if $root.Values.tracingEnabled }}
+            {{- if $root.Values.jaegerEnabled }}
             - name: JAEGER_AGENT_BINARY_PORT
               value: "6832"
             - name: JAEGER_AGENT_COMPACT_PORT
@@ -95,15 +85,34 @@ spec:
         {{- /* CSI volume mount only for AWS provider or legacy mode */ -}}
         {{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
             volumeMounts:
-              - name: secrets-store-inline
-                mountPath: "/mnt/secrets-store"
+              {{- include "k8app.secretVolumeMounts" (dict "root" $root) | nindent 14 }}
+        {{- end }}
+        {{- if $root.Values.configfiles }}
+            volumeMounts:
+              {{- if $root.Values.configfiles.files }}
+              {{- range $root.Values.configfiles.files }}
+              - name: {{ printf "%s-config" $appname }}
+                readOnly: true
+                mountPath: {{ .mountPath | default (printf "%s/%s" $root.Values.configfiles.mountPath .path) }}
+                subPath: {{ .path }}
+              {{- end }}
+              {{- else }}
+              - name: {{ printf "%s-config" $appname }}
+                readOnly: true
+                mountPath: {{ $root.Values.configfiles.mountPath }}
+              {{- end }}
         {{- end }}
             image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
             imagePullPolicy: Always
+        {{- if $value.resources }}
+            resources:
+              {{- toYaml $value.resources | nindent 14 }}
+        {{- end }}
         {{- if $root.Values.nodeSelector }}
           nodeSelector:
           {{ toYaml $root.Values.nodeSelector | indent 8 }}
         {{- end }}
+          {{- include "k8app.imagePullSecrets" (dict "root" $root) | nindent 10 }}
           restartPolicy: Never
           terminationGracePeriodSeconds: 30
   schedule: {{ default "1 * * * *" $value.schedule | quote }}

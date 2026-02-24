@@ -84,3 +84,76 @@ Example: "https://api.{env}.example.com" with environment=dev → "https://api.d
 {{- define "configmap.resolveValue" -}}
 {{- .value | toString | replace "{env}" .root.Values.environment -}}
 {{- end -}}
+
+{{/*
+Generate envFrom block (configmap ref + vault secret refs)
+Input: dict with "root" (root context), "appname" (app name)
+*/}}
+{{- define "k8app.envFrom" -}}
+{{- $root := .root -}}
+{{- $appname := .appname -}}
+{{- if or $root.Values.secrets $root.Values.configmap }}
+envFrom:
+{{- if $root.Values.configmap }}
+- configMapRef:
+    name: {{ $appname }}
+{{- end }}
+{{- if and $root.Values.secrets (eq (include "secrets.isVaultEnabled" $root) "true") }}
+{{- $secretsByPath := dict -}}
+{{- range $envVar, $pathTemplate := $root.Values.secrets -}}
+{{- $resolvedPath := include "secrets.resolvePath" (dict "path" $pathTemplate "root" $root) -}}
+{{- $_ := set $secretsByPath $resolvedPath true -}}
+{{- end -}}
+{{- $sortedPaths := keys $secretsByPath | sortAlpha -}}
+{{- range $pathIndex, $path := $sortedPaths }}
+- secretRef:
+    name: {{ $appname }}-vault-{{ $pathIndex }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Generate CSI volume for AWS/legacy secrets
+Input: dict with "root" (root context), "appname" (app name)
+*/}}
+{{- define "k8app.secretVolumes" -}}
+{{- $root := .root -}}
+{{- $appname := .appname -}}
+{{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
+- name: secrets-store-inline
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ $appname }}-aws-secrets
+{{- end }}
+{{- end -}}
+
+{{/*
+Generate CSI volumeMount for secrets-store-inline
+Input: dict with "root" (root context)
+*/}}
+{{- define "k8app.secretVolumeMounts" -}}
+{{- $root := .root -}}
+{{- if and $root.Values.secrets (or (not $root.Values.secretsProvider) (ne $root.Values.secretsProvider.provider "vault")) }}
+- name: secrets-store-inline
+  mountPath: "/mnt/secrets-store"
+{{- end }}
+{{- end -}}
+
+{{/*
+Generate imagePullSecrets block
+Input: dict with "root" (root context)
+*/}}
+{{- define "k8app.imagePullSecrets" -}}
+{{- $root := .root -}}
+{{- if $root.Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml $root.Values.imagePullSecrets | nindent 2 }}
+{{- /* Legacy support for deploySecretHarbor/deploySecretNexus */ -}}
+{{- else if or $root.Values.deploySecretHarbor $root.Values.deploySecretNexus }}
+imagePullSecrets:
+- name: regsecret
+{{- end }}
+{{- end -}}

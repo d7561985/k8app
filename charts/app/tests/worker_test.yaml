@@ -1,0 +1,82 @@
+suite: Worker Deployment
+templates:
+  - worker.yaml
+values:
+  - ../values.yaml
+
+tests:
+  - it: should not render when worker is disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create worker deployment
+    set:
+      appName: myapp
+      worker:
+        enabled: true
+        spec:
+          queue:
+            replicas: 2
+            command: ["./worker"]
+            args: ["--queue", "tasks"]
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: should include configmap envFrom
+    set:
+      appName: myapp
+      configmap:
+        LOG_LEVEL: info
+      worker:
+        enabled: true
+        spec:
+          default:
+            replicas: 1
+            command: ["./worker"]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: myapp
+
+  - it: should support tolerations
+    set:
+      appName: myapp
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: worker
+          effect: NoSchedule
+      worker:
+        enabled: true
+        spec:
+          default:
+            replicas: 1
+            command: ["./worker"]
+    asserts:
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+
+  - it: should support image pull secrets
+    set:
+      appName: myapp
+      imagePullSecrets:
+        - name: regsecret
+      worker:
+        enabled: true
+        spec:
+          default:
+            replicas: 1
+            command: ["./worker"]
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: regsecret

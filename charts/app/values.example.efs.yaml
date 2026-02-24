@@ -13,9 +13,11 @@ secrets:
 
 worker:
   enabled: true
-  replicas: 2
-  command: ["printenv"]
-  args: ["HOSTNAME","PATH"]
+  spec:
+    default:
+      replicas: 2
+      command: ["printenv"]
+      args: ["HOSTNAME","PATH"]
 
 job:
   enabled: true
