@@ -27,6 +27,7 @@ rbac:
 
 service:
   enabled: false
+  type: ClusterIP
 #  ports:
 #    http:
 #      externalPort: 8080

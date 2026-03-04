@@ -62,7 +62,7 @@ spec:
             {{- include "k8app.envFrom" (dict "root" $root "appname" $appname) | nindent 12 }}
             env:
             - name: BUILD_ID
-              value: {{ $root.Values.buildId | quote | default "000" }}
+              value: {{ $root.Values.buildId | default "000" | quote }}
             - name: SENTRY_ENVIRONMENT
               value: {{ $root.Values.environment | quote }}
             - name: SENTRY_RELEASE

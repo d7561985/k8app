@@ -87,7 +87,7 @@ spec:
       containers:
       - env:
         - name: BUILD_ID
-          value: {{ $root.Values.buildId | quote | default "NULL" }}
+          value: {{ $root.Values.buildId | default "NULL" | quote }}
     {{- if $root.Values.cache.enabled }}
         - name: REDIS_URL
           value: "redis://{{ $appname }}-cache-sv:{{ $root.Values.cache.port }}"
