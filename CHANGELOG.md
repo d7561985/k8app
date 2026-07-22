@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.16.0] - 2026-07-22
+
+### Added
+- **Extensions** — extension (sidecar) containers in the main `Deployment` now render `ports`. Set `extensions.<name>.ports` (a standard container `ports` list) and it appears on the sidecar
+
+### Fixed
+- **Extensions** — `resources` declared on an extension were silently dropped by `deployment.yaml` (rendered only for `worker` pods), so every sidecar ran unbounded even though `extensions.<name>.resources` is documented and honored elsewhere. The Deployment's extension container now renders `resources`, matching `worker.yaml`
+- **Extensions** — an extension's `volumeMounts` (from `configfiles` / `sharedVolumes`) were nested inside `{{ if $spec.readinessProbe }}` because the readiness-probe block was missing a closing `{{ end }}`. A sidecar with `configfiles` but no probe therefore silently kept the image's default config (nothing mounted). The block is now closed correctly, so mounts render regardless of whether a probe is set
+
+### Notes
+- Backward compatible where the chart already produced correct output. Rendered output changes only in the cases these fixes target: extensions that declared `resources` (now applied), `ports` (now applied), or `configfiles` / `sharedVolumes` without a probe (now mounted)
+
 ## [3.15.0] - 2026-07-04
 
 ### Added

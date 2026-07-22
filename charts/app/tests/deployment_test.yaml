@@ -177,3 +177,78 @@ tests:
     asserts:
       - isNotNull:
           path: spec.template.metadata.annotations["checksum/secrets"]
+
+  - it: should render resources on an extension sidecar
+    set:
+      appName: myapp
+      extensions:
+        sidecar:
+          image:
+            repository: nginx
+            tag: "1.27-alpine"
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: myapp-sidecar
+      - equal:
+          path: spec.template.spec.containers[1].resources.limits.cpu
+          value: 100m
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: 32Mi
+
+  - it: should render ports on an extension sidecar
+    set:
+      appName: myapp
+      extensions:
+        sidecar:
+          image:
+            repository: nginx
+            tag: "1.27-alpine"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].ports[0].containerPort
+          value: 8080
+      - equal:
+          path: spec.template.spec.containers[1].ports[0].name
+          value: http
+
+  # Regression: an extension's volumeMounts must render even when the extension
+  # has no probe. Previously volumeMounts were nested inside `if readinessProbe`,
+  # so a sidecar with configfiles but no probe silently got no config mounted.
+  - it: should mount extension configfiles without a readinessProbe
+    set:
+      appName: myapp
+      extensions:
+        sidecar:
+          image:
+            repository: nginx
+            tag: "1.27-alpine"
+          configfiles:
+            mountPath: /etc/nginx/conf.d
+            files:
+              - key: default.conf
+                path: default.conf
+                mountPath: /etc/nginx/conf.d/default.conf
+            data:
+              default.conf: |
+                server { listen 8080; }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: myapp-sidecar-config
+            mountPath: /etc/nginx/conf.d/default.conf
+            subPath: default.conf
+            readOnly: true

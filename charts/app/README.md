@@ -1355,6 +1355,7 @@ extensions:
 
 Extensions support most container features:
 - Custom images, commands, and arguments
+- Container ports
 - Resource limits and requests
 - Environment variables
 - Health checks (liveness/readiness probes)
